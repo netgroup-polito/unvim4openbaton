@@ -1,0 +1,36 @@
+group 'org.polito.unvim'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:1.2.6.RELEASE")
+    }
+}
+
+repositories {
+    mavenCentral()
+    /**
+     * Only needed for openbaton snapshots dependencies
+     */
+    maven {
+        url 'https://oss.sonatype.org/content/repositories/snapshots/'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'spring-boot'
+
+
+mainClassName = 'org.polito.unvim.UnClient'
+
+
+dependencies {
+    compile 'org.openbaton:plugin-sdk:3.0.0'
+    compile 'org.springframework:spring-context:4.2.1.RELEASE'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.8.5'
+}
