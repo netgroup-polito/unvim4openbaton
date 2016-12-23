@@ -62,6 +62,7 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public List<NFVImage> listImages(VimInstance vimInstance) throws VimDriverException {
+		log.debug("Listing images for VimInstance with name: " + vimInstance.getName());
 		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
 		List<NFVImage> images = new ArrayList<>();
 		for(VnfTemplate template: templates)

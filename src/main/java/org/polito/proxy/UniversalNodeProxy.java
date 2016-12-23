@@ -8,16 +8,21 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.message.UnConfiguration;
 import org.polito.model.template.VnfTemplate;
 import org.polito.model.template.VnfTemplateList;
 import org.polito.model.template.VnfTemplateWrapper;
+import org.polito.unvim.UnClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class UniversalNodeProxy {
-	
-	public static List<VnfTemplate> getTemplates(String universalNodeEndpoint)
+	private static Logger log = LoggerFactory.getLogger(UniversalNodeProxy.class);
+
+	public static List<VnfTemplate> getTemplates(String universalNodeEndpoint) throws VimDriverException
 	{
 		UnConfiguration unConf;
 		try
@@ -43,8 +48,8 @@ public class UniversalNodeProxy {
 		}
 		catch(IOException e)
 		{
-			e.printStackTrace();
-			return null;
+			log.error(e.getMessage(), e);
+			throw new VimDriverException(e.getMessage());
 		}
 
 		return DatastoreProxy.getTemplates(unConf.getDatastoreEndpoint());

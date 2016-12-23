@@ -8,15 +8,20 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.template.VnfTemplate;
 import org.polito.model.template.VnfTemplateList;
 import org.polito.model.template.VnfTemplateWrapper;
+import org.polito.unvim.UnClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class DatastoreProxy {
-	
-	public static List<VnfTemplate> getTemplates(String datastoreEndpoint)
+	private static Logger log = LoggerFactory.getLogger(DatastoreProxy.class);
+
+	public static List<VnfTemplate> getTemplates(String datastoreEndpoint) throws VimDriverException
 	{
 		VnfTemplateList obj;
 		try
@@ -43,8 +48,8 @@ public class DatastoreProxy {
 		}
 		catch(IOException e)
 		{
-			e.printStackTrace();
-			return null;
+			log.error(e.getMessage(), e);
+			throw new VimDriverException(e.getMessage());
 		}
 		List<VnfTemplate> templates = new ArrayList<>();
 		for(VnfTemplateWrapper vnfTemplateWrapper: obj.getList())
