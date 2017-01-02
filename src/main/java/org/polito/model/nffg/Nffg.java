@@ -44,7 +44,7 @@ public class Nffg {
 	}
 
 	public void setVnfs(List<Vnf> vnfs) {
-		vnfs = vnfs;
+		this.vnfs = vnfs;
 	}
 
 	public BigSwitch getBigSwitch() {

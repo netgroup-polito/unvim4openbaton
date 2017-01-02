@@ -1,7 +1,5 @@
 package org.polito.model.nffg;
 
-import java.util.AbstractMap.SimpleEntry;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Action {

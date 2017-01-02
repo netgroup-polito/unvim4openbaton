@@ -40,7 +40,7 @@ public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
 		case "interface":
 			InterfaceEndPoint iep = new InterfaceEndPoint();
 			JsonNode internalNode = node.get("interface");
-			iep.setIfName(internalNode.get("ifName").asText());
+			iep.setIfName(internalNode.get("if-name").asText());
 			ep.setEndpoint(iep);
 			break;
 
