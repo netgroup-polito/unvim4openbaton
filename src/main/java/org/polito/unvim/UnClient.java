@@ -89,8 +89,43 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public List<DeploymentFlavour> listFlavors(VimInstance vimInstance) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return new ArrayList<DeploymentFlavour>();
+		List<DeploymentFlavour> flavors = new ArrayList<DeploymentFlavour>();
+		DeploymentFlavour f1 = new DeploymentFlavour();
+		f1.setExtId("1");
+		f1.setRam(512);
+		f1.setDisk(1);
+		f1.setVcpus(1);
+		f1.setFlavour_key("m1.tiny");
+		flavors.add(f1);
+		DeploymentFlavour f2 = new DeploymentFlavour();
+		f2.setExtId("2");
+		f2.setRam(2048);
+		f2.setDisk(20);
+		f2.setVcpus(1);
+		f2.setFlavour_key("m1.small");
+		flavors.add(f2);
+		DeploymentFlavour f3 = new DeploymentFlavour();
+		f3.setExtId("3");
+		f3.setRam(4096);
+		f3.setDisk(40);
+		f3.setVcpus(2);
+		f3.setFlavour_key("m1.medium");
+		flavors.add(f3);
+		DeploymentFlavour f4 = new DeploymentFlavour();
+		f4.setExtId("4");
+		f4.setRam(8192);
+		f4.setDisk(80);
+		f4.setVcpus(4);
+		f4.setFlavour_key("m1.large");
+		flavors.add(f4);
+		DeploymentFlavour f5 = new DeploymentFlavour();
+		f5.setExtId("5");
+		f5.setRam(16384);
+		f5.setDisk(160);
+		f5.setVcpus(8);
+		f5.setFlavour_key("m1.xlarge");
+		flavors.add(f5);
+		return flavors;
 	}
 
 	@Override
@@ -216,8 +251,16 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Quota getQuota(VimInstance vimInstance) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		Quota q = new Quota();
+		q.setCores(4);
+		q.setFloatingIps(0);
+		q.setId("1");
+		q.setInstances(10);
+		q.setKeyPairs(0);
+		q.setRam(2048);
+		q.setTenant(vimInstance.getTenant());
+		q.setVersion(1);
+		return q;
 	}
 
 	@Override
