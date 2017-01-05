@@ -68,7 +68,9 @@ public class UniversalNodeProxy {
 	        connection.setRequestMethod("GET");
 	        connection.setRequestProperty("Accept", "application/json");
 	        int responseCode = connection.getResponseCode();
-			//TODO: Deal with responseCode different from 200
+			//TODO: Deal with responseCode different from 200 & 404
+	        if(responseCode==404)
+		        return null;
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 			String inputLine;

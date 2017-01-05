@@ -19,6 +19,10 @@ import org.openbaton.catalogue.security.Key;
 import org.openbaton.exceptions.VimDriverException;
 import org.openbaton.plugin.PluginStarter;
 import org.openbaton.vim.drivers.interfaces.VimDriver;
+import org.polito.management.NetworkManager;
+import org.polito.management.NffgManager;
+import org.polito.model.nffg.Nffg;
+import org.polito.model.nffg.Vnf;
 import org.polito.model.template.VnfTemplate;
 import org.polito.proxy.DatastoreProxy;
 import org.polito.proxy.UniversalNodeProxy;
@@ -151,8 +155,12 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Network createNetwork(VimInstance vimInstance, Network network) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		if(nffg==null)
+			nffg = NffgManager.createEmptyNffg("openbaton");
+		NetworkManager.createNetwork(nffg, network);
+		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		return network;
 	}
 
 	@Override
