@@ -3,10 +3,14 @@ package org.polito.model.nffg;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Vnf {
 	private String id;
 	private String name;
 	private List<Port> ports  = new ArrayList<>();
+	@JsonProperty("vnf_template")
+	private String template;
 
 	public String getId()
 	{
@@ -40,6 +44,14 @@ public class Vnf {
 
 	public void addPort(Port p) {
 		ports.add(p);
+	}
+
+	public String getTemplate() {
+		return template;
+	}
+
+	public void setTemplate(String template) {
+		this.template = template;
 	}
 
 }

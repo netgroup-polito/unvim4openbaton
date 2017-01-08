@@ -54,7 +54,7 @@ public class UnClient extends VimDriver {
 		          Integer.parseInt(args[2]),
 		          Integer.parseInt(args[3]));
 		    } else
-		      PluginStarter.registerPlugin(UnClient.class, "un", "localhost", 8000, 10);
+		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 5);
 		}
 
 	@Override
@@ -82,13 +82,15 @@ public class UnClient extends VimDriver {
 	@Override
 	public List<Server> listServer(VimInstance vimInstance) throws VimDriverException {
 		// TODO Auto-generated method stub
-		return null;
+		return new ArrayList<>();
 	}
 
 	@Override
 	public List<Network> listNetworks(VimInstance vimInstance) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return new ArrayList<Network>();
+		log.debug("Listing networks for VimInstance with name: " + vimInstance.getName());
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		List<Network> networks = NetworkManager.getNetworks(nffg);
+		return networks;
 	}
 
 	@Override
@@ -155,6 +157,8 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Network createNetwork(VimInstance vimInstance, Network network) throws VimDriverException {
+		log.debug("New network required:");
+		log.debug(network.toString());
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
 		if(nffg==null)
 			nffg = NffgManager.createEmptyNffg("openbaton");
@@ -216,8 +220,14 @@ public class UnClient extends VimDriver {
 	@Override
 	public Subnet createSubnet(VimInstance vimInstance, Network createdNetwork, Subnet subnet)
 			throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		log.debug("New subnet required:");
+		log.debug(subnet.toString());
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state");
+		NetworkManager.createSubnet(nffg, createdNetwork, subnet);
+		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		return subnet;
 	}
 
 	@Override
@@ -259,12 +269,13 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Quota getQuota(VimInstance vimInstance) throws VimDriverException {
+		log.debug("Required Quota.");
 		Quota q = new Quota();
 		q.setCores(4);
-		q.setFloatingIps(0);
+		q.setFloatingIps(10);
 		q.setId("1");
 		q.setInstances(10);
-		q.setKeyPairs(0);
+		q.setKeyPairs(100);
 		q.setRam(2048);
 		q.setTenant(vimInstance.getTenant());
 		q.setVersion(1);
@@ -273,8 +284,7 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public String getType(VimInstance vimInstance) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		return properties.getProperty("type");
 	}
 
 }

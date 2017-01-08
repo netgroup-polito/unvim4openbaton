@@ -25,7 +25,7 @@ public class NffgManager {
 	public static void createVnf(Nffg nffg, String vnfId, String vnfName) {
 		Vnf vnf = new Vnf();
 		vnf.setId(vnfId);
-		vnf.setName("switch");
+		vnf.setName(vnfName);
 		nffg.addVnf(vnf);
 	}
 
