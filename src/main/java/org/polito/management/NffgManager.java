@@ -42,12 +42,15 @@ public class NffgManager {
 		return nffg;
 	}
 
-	public static void createVnf(Nffg nffg, String id, String name, String description, String functionalCapability) {
+	public static void createVnf(Nffg nffg, String id, String name, String description, String functionalCapability, String template) {
 		Vnf vnf = new Vnf();
 		vnf.setId(id);
 		vnf.setName(name);
 		vnf.setDescription(description);
-		vnf.setFunctionalCapability(functionalCapability);
+		if(functionalCapability!=null)
+			vnf.setFunctionalCapability(functionalCapability);
+		if(template!=null)
+			vnf.setTemplate(template);
 		nffg.addVnf(vnf);
 	}
 

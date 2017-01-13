@@ -3,6 +3,7 @@ package org.polito.unvim;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,6 +20,7 @@ import org.openbaton.catalogue.security.Key;
 import org.openbaton.exceptions.VimDriverException;
 import org.openbaton.plugin.PluginStarter;
 import org.openbaton.vim.drivers.interfaces.VimDriver;
+import org.polito.management.ComputeManager;
 import org.polito.management.NetworkManager;
 import org.polito.management.NffgManager;
 import org.polito.model.nffg.Nffg;
@@ -54,7 +56,7 @@ public class UnClient extends VimDriver {
 		          Integer.parseInt(args[2]),
 		          Integer.parseInt(args[3]));
 		    } else
-		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 5);
+		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 1);
 		}
 
 	@Override
@@ -138,15 +140,48 @@ public class UnClient extends VimDriver {
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
 			String keyPair, Set<String> networks, Set<String> securityGroups, String s, Map<String, String> floatingIps,
 			Set<Key> keys) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		synchronized(this)
+		{
+			log.debug("New server required:");
+			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", s: " + (s==null? "null":s));
+			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+			if(nffg==null)
+				throw new VimDriverException("Illegal state. A nffg must be already deployed");
+			// Given an image name search the template:
+			String templateId=null;
+			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
+			for(VnfTemplate template: templates)
+				if(template.getId().equals(image))
+					templateId=template.getId();
+			if(templateId==null)
+				throw new VimDriverException("The required image is no longer present");
+			// Create the server
+			Server server = ComputeManager.createServer(nffg, hostname, templateId, extId, keyPair, networks, securityGroups, s);
+			UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+			return server;
+		}
 	}
 
 	@Override
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
 			String keyPair, Set<String> networks, Set<String> securityGroups, String s) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		log.debug("New server required:");
+		log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", s: " + (s==null? "null":s));
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		// Given an image name search the template:
+		String templateId=null;
+		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
+		for(VnfTemplate template: templates)
+			if(template.getId().equals(image))
+				templateId=template.getId();
+		if(templateId==null)
+			throw new VimDriverException("The required image is no longer present");
+		// Create the server
+		Server server = ComputeManager.createServer(nffg, hostname, templateId, extId, keyPair, networks, securityGroups, s);
+		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		return server;
 	}
 
 	@Override

@@ -11,6 +11,7 @@ public class Port {
 	@JsonProperty("ipv6-config")
 	private String ipv6Config;
 	private String name;
+	private String technology;
 
 	public String getPosition() {
 		return position;
@@ -58,6 +59,14 @@ public class Port {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	public String getTechnology() {
+		return technology;
+	}
+
+	public void setTechnology(String technology) {
+		this.technology = technology;
 	}
 	
 }

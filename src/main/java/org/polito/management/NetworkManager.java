@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.openbaton.catalogue.nfvo.Network;
 import org.openbaton.catalogue.nfvo.Subnet;
-import org.polito.model.nffg.IdAware;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Vnf;
 
@@ -13,14 +12,14 @@ public class NetworkManager {
 
 	public static void createNetwork(Nffg nffg, Network network) {
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
-		NffgManager.createVnf(nffg,vnfId,network.getName(),"Network","switch");
+		NffgManager.createVnf(nffg,vnfId,network.getName(),"Network","switch",null);
 		network.setExtId(vnfId);
 	}
 
 	public static void createSubnet(Nffg nffg, Network network, Subnet subnet)
 	{
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
-		NffgManager.createVnf(nffg,vnfId,subnet.getName(),"Subnet","dhcp");
+		NffgManager.createVnf(nffg,vnfId,subnet.getName(),"Subnet","dhcp",null);
 		subnet.setExtId(vnfId);
 		NffgManager.connectVnfs(nffg,network.getExtId(),subnet.getExtId());
 		//TODO: Interact with the configuration Service in order to configure the dhcp
