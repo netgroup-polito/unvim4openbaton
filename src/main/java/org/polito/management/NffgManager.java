@@ -22,10 +22,12 @@ public class NffgManager {
 		return nffg;
 	}
 
-	public static void createVnf(Nffg nffg, String vnfId, String vnfName) {
+	public static void createVnf(Nffg nffg, String id, String name, String description, String functionalCapability) {
 		Vnf vnf = new Vnf();
-		vnf.setId(vnfId);
-		vnf.setName(vnfName);
+		vnf.setId(id);
+		vnf.setName(name);
+		vnf.setDescription(description);
+		vnf.setFunctionalCapability(functionalCapability);
 		nffg.addVnf(vnf);
 	}
 

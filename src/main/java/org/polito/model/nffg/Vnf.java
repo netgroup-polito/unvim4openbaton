@@ -11,6 +11,9 @@ public class Vnf {
 	private List<Port> ports  = new ArrayList<>();
 	@JsonProperty("vnf_template")
 	private String template;
+	@JsonProperty("functional_capability")
+	private String functionalCapability;
+	private String description;
 
 	public String getId()
 	{
@@ -54,4 +57,19 @@ public class Vnf {
 		this.template = template;
 	}
 
+	public String getFunctionalCapability() {
+		return functionalCapability;
+	}
+
+	public void setFunctionalCapability(String functionalCapability) {
+		this.functionalCapability = functionalCapability;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
 }

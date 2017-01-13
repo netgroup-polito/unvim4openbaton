@@ -12,16 +12,16 @@ public class NetworkManager {
 
 	public static void createNetwork(Nffg nffg, Network network) {
 		String vnfId = NffgManager.getNewId();
-		NffgManager.createVnf(nffg,"Net"+network.getName()+vnfId,"switch");
+		NffgManager.createVnf(nffg,vnfId,network.getName(),"Network","switch");
 		network.setExtId(vnfId);
 	}
 
 	public static void createSubnet(Nffg nffg, Network network, Subnet subnet)
 	{
 		String vnfId = NffgManager.getNewId();
-		NffgManager.createVnf(nffg,"SNet"+subnet.getName()+vnfId,"dhcp");
+		NffgManager.createVnf(nffg,vnfId,subnet.getName(),"Subnet","dhcp");
 		subnet.setExtId(vnfId);
-		//NffgManager.connectVnfs("Net"+network.getName()+network.getExtId(),"SNet"+subnet.getName()+vnfId);
+		//NffgManager.connectVnfs(nffg,network.getExtId(),subnet.getExtId());
 		//TODO: Interact with the configuration Service in order to configure the dhcp
 	}
 
@@ -29,18 +29,14 @@ public class NetworkManager {
 		List<Network> networks = new ArrayList<>();
 		if(nffg!=null)
 			for(Vnf vnf: nffg.getVnfs())
-			{
-				String id = vnf.getId();
-				if(id.substring(0,2).equals("Net"))
+				if(vnf.getDescription().equals("Network"))
 				{
 					Network net = new Network();
-					String netName = id.substring(3,id.length()-26);
-					String netId = id.substring(id.length()-26);
-					net.setExtId(netId);
-					net.setName(netName);
+					net.setExtId(vnf.getId());
+					net.setName(vnf.getName());
+					networks.add(net);
 					//TODO: Set subnets
 				}
-			}
 		return networks;
 	}
 
