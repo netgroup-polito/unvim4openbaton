@@ -19,8 +19,4 @@ public class BigSwitch {
 		this.flowRules = flowRules;
 	}
 
-	public void addFlowRule(FlowRule fr) {
-		flowRules.add(fr);
-	}
-
 }

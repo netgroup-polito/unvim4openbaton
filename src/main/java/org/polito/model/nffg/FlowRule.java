@@ -3,12 +3,13 @@ package org.polito.model.nffg;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FlowRule {
+public class FlowRule implements IdAware{
 	private String id;
 	private int priority;
 	private Match match;
 	private List<Action> actions = new ArrayList<>();
 
+	@Override
 	public String getId()
 	{
 		return id;

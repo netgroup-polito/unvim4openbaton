@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Vnf {
+public class Vnf implements IdAware{
 	private String id;
 	private String name;
 	private List<Port> ports  = new ArrayList<>();
@@ -15,6 +15,7 @@ public class Vnf {
 	private String functionalCapability;
 	private String description;
 
+	@Override
 	public String getId()
 	{
 		return id;

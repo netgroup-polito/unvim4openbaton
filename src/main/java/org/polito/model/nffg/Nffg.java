@@ -3,6 +3,7 @@ package org.polito.model.nffg;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Nffg {
@@ -61,5 +62,14 @@ public class Nffg {
 
 	public void addVnf(Vnf vnf) {
 		vnfs.add(vnf);
+	}
+
+	public void addFlowRule(FlowRule fr) {
+		bigSwitch.getFlowRules().add(fr);
+	}
+
+	@JsonIgnore
+	public List<FlowRule> getFlowRules() {
+		return bigSwitch.getFlowRules();
 	}
 }
