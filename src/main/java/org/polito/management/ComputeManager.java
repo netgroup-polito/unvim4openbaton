@@ -13,7 +13,7 @@ public class ComputeManager {
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
 		NffgManager.createVnf(nffg,vnfId,hostname,"Server",null,templateImageId);
 		for(String networkId: networks)
-			NffgManager.connectVnfs(nffg, networkId, vnfId);
+			NffgManager.connectVnfToVnf(nffg, networkId, vnfId, false);
 		Server createdServer = new Server();
 		createdServer.setCreated(new Date());
 		createdServer.setExtendedStatus("running");

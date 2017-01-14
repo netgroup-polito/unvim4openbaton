@@ -84,9 +84,9 @@ public class NffgManager {
 		nffg.addEndpoint(wrappedEP);
 	}
 
-	public static void connectVnfs(Nffg nffg, String firstVnfId, String secondVnfId) {
-		String portFirstVnfId = createPort(nffg, firstVnfId);
-		String portSeconfVnfId = createPort(nffg, secondVnfId);
+	public static void connectVnfToVnf(Nffg nffg, String firstVnfId, String secondVnfId, boolean trustedConnection) {
+		String portFirstVnfId = createPort(nffg, firstVnfId, trustedConnection);
+		String portSeconfVnfId = createPort(nffg, secondVnfId, false);
 		Match match = new Match();
 		match.setInput("vnf:" + firstVnfId + ":" + portFirstVnfId);
 		Action action = new Action();
@@ -107,7 +107,7 @@ public class NffgManager {
 		nffg.addFlowRule(flowRule);
 	}
 
-	private static String createPort(Nffg nffg, String vnfId) {
+	private static String createPort(Nffg nffg, String vnfId, boolean trusted) {
 		int portNumb=0;
 		Vnf vnfToUpdate=null;
 		for(Vnf vnf: nffg.getVnfs())
@@ -123,13 +123,31 @@ public class NffgManager {
 		Port newPort = new Port();
 		newPort.setId(newPortId);
 		newPort.setName(newPortName);
+		if(trusted)
+		{
+			newPort.setTrusted(true);
+			newPort.setMacAddress(generateMacAddress());
+		}
 		ports.add(newPort);
 		return newPortId;
 
 	}
 
+	private static String generateMacAddress() {
+	    byte[] macAddr = new byte[6];
+	    random.nextBytes(macAddr);
+	    macAddr[0] = (byte)(macAddr[0] & (byte)254);  //zeroing last 2 bytes to make it unicast and locally adminstrated
+	    StringBuilder sb = new StringBuilder(18);
+	    for(byte b : macAddr){
+	        if(sb.length() > 0)
+	            sb.append(":");
+	        sb.append(String.format("%02x", b));
+	    }
+	    return sb.toString();
+	}
+
 	public static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId) {
-		String portVnfId = createPort(nffg, vnfId);
+		String portVnfId = createPort(nffg, vnfId, false);
 		Match match = new Match();
 		match.setInput("vnf:" + vnfId + ":" + portVnfId);
 		Action action = new Action();

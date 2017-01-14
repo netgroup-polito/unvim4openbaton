@@ -27,7 +27,9 @@ public class NetworkManager {
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
 		NffgManager.createVnf(nffg,vnfId,subnet.getName(),SUBNET,"dhcp",null);
 		subnet.setExtId(vnfId);
-		NffgManager.connectVnfs(nffg,network.getExtId(),subnet.getExtId());
+		String managementNetId = NffgManager.getVnfsByDescription(nffg,MANAGEMENT_NETWORK).get(0).getId();
+		NffgManager.connectVnfToVnf(nffg,vnfId,managementNetId,true);
+		NffgManager.connectVnfToVnf(nffg,vnfId,network.getExtId(),false);
 		//TODO: Interact with the configuration Service in order to configure the dhcp
 	}
 
@@ -52,7 +54,7 @@ public class NetworkManager {
 		NffgManager.createVnf(nffg, managementSwId, null, MANAGEMENT_NETWORK, null, "managementSwitch");
 		NffgManager.createVnf(nffg, managementDhcpId, null, MANAGEMENT_SUBNET, null, "managementDhcp");
 		NffgManager.createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "STATIC", "192.168.1.1");
-		NffgManager.connectVnfs(nffg,managementSwId,managementDhcpId);
+		NffgManager.connectVnfToVnf(nffg,managementSwId,managementDhcpId,false);
 		NffgManager.connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
 	}
 
