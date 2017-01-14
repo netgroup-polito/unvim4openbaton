@@ -3,11 +3,20 @@ package org.polito.management;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.net.util.SubnetUtils;
+import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.openbaton.catalogue.nfvo.Network;
 import org.openbaton.catalogue.nfvo.Subnet;
+import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.nffg.Nffg;
+import org.polito.model.nffg.Port;
 import org.polito.model.nffg.Vnf;
 import org.polito.model.nffg.AbstractEP.Type;
+import org.polito.model.yang.dhcp.DhcpYang;
+
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class NetworkManager {
 	private static final String NETWORK = "Network";
@@ -56,6 +65,50 @@ public class NetworkManager {
 		NffgManager.createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "STATIC", "192.168.1.1");
 		NffgManager.connectVnfToVnf(nffg,managementSwId,managementDhcpId,false);
 		NffgManager.connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
+	}
+
+	public static void writeSubnetConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet) throws VimDriverException {
+		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
+		String netmask = subnetInfo.getNetmask();
+		String defaultGateway = subnetInfo.getLowAddress();
+		String sectionStopIp = subnetInfo.getHighAddress();
+		String dhcpUserPortIp = nextIpAddress(defaultGateway);
+		if(!subnetInfo.isInRange(dhcpUserPortIp))
+			throw new VimDriverException("Network range is too small");
+		String sectionStartIp = nextIpAddress(dhcpUserPortIp);
+		if(!subnetInfo.isInRange(sectionStartIp))
+			throw new VimDriverException("Network range is too small");
+		YangManager.setServerSection(yang,sectionStartIp,sectionStopIp);
+		YangManager.setServerIpPoolParameters(yang,"100","1000","8.8.8.8","polito.it");
+		YangManager.setServerDefaultGateway(yang,defaultGateway,netmask);
+		Vnf dhcp = NffgManager.getVnfById(nffg, subnet.getExtId());
+		for(Port port: dhcp.getPorts())
+			if(port.isTrusted())
+				YangManager.addInterface(yang, port.getName(), dhcpUserPortIp, "static", "dhcp", defaultGateway);
+			else
+				YangManager.addInterface(yang, port.getName(), "", "dhcp", "config", "");
+	}
+
+	private static final String nextIpAddress(final String input) {
+	    final String[] tokens = input.split("\\.");
+	    if (tokens.length != 4)
+	        throw new IllegalArgumentException();
+	    for (int i = tokens.length - 1; i >= 0; i--) {
+	        final int item = Integer.parseInt(tokens[i]);
+	        if (item < 255) {
+	            tokens[i] = String.valueOf(item + 1);
+	            for (int j = i + 1; j < 4; j++) {
+	                tokens[j] = "0";
+	            }
+	            break;
+	        }
+	    }
+	    return new StringBuilder()
+	    .append(tokens[0]).append('.')
+	    .append(tokens[1]).append('.')
+	    .append(tokens[2]).append('.')
+	    .append(tokens[3])
+	    .toString();
 	}
 
 }

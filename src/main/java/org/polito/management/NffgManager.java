@@ -176,5 +176,12 @@ public class NffgManager {
 					vnfs.add(vnf);
 		return vnfs;
 	}
+
+	public static Vnf getVnfById(Nffg nffg, String id) {
+		for(Vnf vnf: nffg.getVnfs())
+			if(vnf.getId().equals(id))
+				return vnf;
+		return null;
+	}
 	
 }

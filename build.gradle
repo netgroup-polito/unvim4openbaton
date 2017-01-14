@@ -33,4 +33,5 @@ dependencies {
     compile 'org.openbaton:plugin-sdk:3.0.0'
     compile 'org.springframework:spring-context:4.2.1.RELEASE'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.8.5'
+    compile 'commons-net:commons-net:3.5'
 }

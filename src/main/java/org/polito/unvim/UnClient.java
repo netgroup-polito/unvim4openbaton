@@ -26,6 +26,7 @@ import org.polito.management.NffgManager;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Vnf;
 import org.polito.model.template.VnfTemplate;
+import org.polito.model.yang.dhcp.DhcpYang;
 import org.polito.proxy.DatastoreProxy;
 import org.polito.proxy.UniversalNodeProxy;
 import org.slf4j.Logger;
@@ -265,6 +266,9 @@ public class UnClient extends VimDriver {
 			throw new VimDriverException("Illegal state");
 		NetworkManager.createSubnet(nffg, createdNetwork, subnet);
 		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		DhcpYang yang = new DhcpYang();
+		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet);
+		//TODO: send the yang to the configuration service
 		return subnet;
 	}
 
