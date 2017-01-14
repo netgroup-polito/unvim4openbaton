@@ -196,7 +196,10 @@ public class UnClient extends VimDriver {
 		log.debug(network.toString());
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
 		if(nffg==null)
+		{
 			nffg = NffgManager.createBootNffg("openbaton");
+			NetworkManager.createManagementNetwork(nffg);
+		}
 		NetworkManager.createNetwork(nffg, network);
 		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
 		return network;

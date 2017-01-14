@@ -44,14 +44,6 @@ public class NffgManager {
 		Nffg nffg = new Nffg();
 		nffg.setId(id);
 		nffg.setBigSwitch(new BigSwitch());
-		String managementSwId = getNewId(nffg.getVnfs());
-		String managementDhcpId = getNewId(nffg.getVnfs());
-		String managementHoststackId = getNewId(nffg.getEndpoints());
-		createVnf(nffg, managementSwId, null, "managementSwitch", null, "managementSwitch");
-		createVnf(nffg, managementDhcpId, null, "managementDhcp", null, "managementDhcp");
-		createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "STATIC", "192.168.1.1");
-		connectVnfs(nffg,managementSwId,managementDhcpId);
-		connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
 		return nffg;
 	}
 
@@ -134,7 +126,7 @@ public class NffgManager {
 
 	}
 
-	private static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId) {
+	public static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId) {
 		String portVnfId = createPort(nffg, vnfId);
 		Match match = new Match();
 		match.setInput("vnf:" + vnfId + ":" + portVnfId);
