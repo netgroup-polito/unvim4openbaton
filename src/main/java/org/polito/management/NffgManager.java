@@ -2,9 +2,11 @@ package org.polito.management;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.polito.model.nffg.AbstractEP.Type;
+import org.openbaton.catalogue.nfvo.Network;
 import org.polito.model.nffg.Action;
 import org.polito.model.nffg.BigSwitch;
 import org.polito.model.nffg.EndpointWrapper;
@@ -146,6 +148,15 @@ public class NffgManager {
 		flowRule.addAction(action);
 		flowRule.setId(getNewId(nffg.getFlowRules()));
 		nffg.addFlowRule(flowRule);
+	}
+
+	public static List<Vnf> getVnfsByDescription(Nffg nffg, String description) {
+		List<Vnf> vnfs = new ArrayList<Vnf>();
+		if(nffg!=null)
+			for(Vnf vnf: nffg.getVnfs())
+				if(vnf.getDescription().equals(description))
+					vnfs.add(vnf);
+		return vnfs;
 	}
 	
 }
