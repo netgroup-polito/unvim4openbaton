@@ -6,11 +6,12 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 @JsonSerialize(using = EndpointSerializer.class)
 @JsonDeserialize(using = EndpointDeserializer.class)
-public class EndpointWrapper {
+public class EndpointWrapper implements IdAware{
 	private String id;
 	private String name;
 	private AbstractEP endpoint;
 
+	@Override
 	public String getId()
 	{
 		return id;

@@ -6,6 +6,11 @@ public class InterfaceEndPoint extends AbstractEP{
 	@JsonProperty("if-name")
 	private String ifName;
 
+	public InterfaceEndPoint()
+	{
+		type=Type.INTERFACE;
+	}
+
 	public String getIfName()
 	{
 		return ifName;

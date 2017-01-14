@@ -2,15 +2,11 @@ package org.polito.model.nffg;
 
 import java.io.IOException;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.node.IntNode;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
 
@@ -43,7 +39,13 @@ public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
 			iep.setIfName(internalNode.get("if-name").asText());
 			ep.setEndpoint(iep);
 			break;
-
+		case "host-stack":
+			HoststackEndPoint hep = new HoststackEndPoint();
+			JsonNode internalHsNode = node.get("host-stack");
+			hep.setConfiguration(internalHsNode.get("configuration").asText());
+			if(hep.getConfiguration().equals("STATIC"))
+				hep.setIp(internalHsNode.get("ipv4").asText());
+			break;
 		default:
 			break;
 		}

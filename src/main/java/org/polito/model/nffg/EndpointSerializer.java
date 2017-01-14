@@ -28,10 +28,17 @@ public class EndpointSerializer extends StdSerializer<EndpointWrapper>{
 		gen.writeStartObject();
 		gen.writeStringField("id", value.getId());
 		gen.writeStringField("name", value.getName());
-		if(value.getEndpoint().getClass()==InterfaceEndPoint.class)
+		switch(value.getEndpoint().getType())
 		{
+		case INTERFACE:
 			gen.writeStringField("type", "interface");
 			gen.writeObjectField("interface", (InterfaceEndPoint)value.getEndpoint());
+			break;
+		case HOSTSTACK:
+			gen.writeStringField("type", "host-stack");
+			gen.writeObjectField("host-stack", (HoststackEndPoint)value.getEndpoint());
+		default:
+			break;
 		}
 		gen.writeEndObject();
 	}

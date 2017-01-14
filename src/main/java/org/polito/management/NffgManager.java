@@ -4,10 +4,14 @@ import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.List;
 
+import org.polito.model.nffg.AbstractEP.Type;
 import org.polito.model.nffg.Action;
 import org.polito.model.nffg.BigSwitch;
+import org.polito.model.nffg.EndpointWrapper;
 import org.polito.model.nffg.FlowRule;
+import org.polito.model.nffg.HoststackEndPoint;
 import org.polito.model.nffg.IdAware;
+import org.polito.model.nffg.InterfaceEndPoint;
 import org.polito.model.nffg.Match;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Port;
@@ -18,6 +22,7 @@ public class NffgManager {
 
 	// 8 characters
 	public static String getNewId(Object objectList) {
+		@SuppressWarnings("unchecked")
 		List<IdAware> list = (List<IdAware>)objectList;
 		String newId = null;
 		boolean univocal = false;
@@ -35,10 +40,18 @@ public class NffgManager {
 		return newId;
 	}
 
-	public static Nffg createEmptyNffg(String id) {
+	public static Nffg createBootNffg(String id) {
 		Nffg nffg = new Nffg();
 		nffg.setId(id);
 		nffg.setBigSwitch(new BigSwitch());
+		String managementSwId = getNewId(nffg.getVnfs());
+		String managementDhcpId = getNewId(nffg.getVnfs());
+		String managementHoststackId = getNewId(nffg.getEndpoints());
+		createVnf(nffg, managementSwId, null, "managementSwitch", null, "managementSwitch");
+		createVnf(nffg, managementDhcpId, null, "managementDhcp", null, "managementDhcp");
+		createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "STATIC", "192.168.1.1");
+		connectVnfs(nffg,managementSwId,managementDhcpId);
+		connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
 		return nffg;
 	}
 
@@ -52,6 +65,29 @@ public class NffgManager {
 		if(template!=null)
 			vnf.setTemplate(template);
 		nffg.addVnf(vnf);
+	}
+
+	public static void createEndpoint(Nffg nffg, String id, String name, Type type, String... endpointArgs) {
+		EndpointWrapper wrappedEP = new EndpointWrapper();
+		wrappedEP.setId(id);
+		wrappedEP.setName(name);
+		switch (type) {
+		case INTERFACE:
+			InterfaceEndPoint iep = new InterfaceEndPoint();
+			iep.setIfName(endpointArgs[0]);
+			wrappedEP.setEndpoint(iep);
+			break;
+		case HOSTSTACK:
+			HoststackEndPoint hep = new HoststackEndPoint();
+			hep.setConfiguration(endpointArgs[0]);
+			if(hep.getConfiguration().equals("STATIC"))
+				hep.setIp(endpointArgs[1]);
+			wrappedEP.setEndpoint(hep);
+			break;
+		default:
+			break;
+		}
+		nffg.addEndpoint(wrappedEP);
 	}
 
 	public static void connectVnfs(Nffg nffg, String firstVnfId, String secondVnfId) {
@@ -98,5 +134,26 @@ public class NffgManager {
 
 	}
 
+	private static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId) {
+		String portVnfId = createPort(nffg, vnfId);
+		Match match = new Match();
+		match.setInput("vnf:" + vnfId + ":" + portVnfId);
+		Action action = new Action();
+		action.setOutput("endpoint:" + endpointId);
+		FlowRule flowRule = new FlowRule();
+		flowRule.setMatch(match);
+		flowRule.addAction(action);
+		flowRule.setId(getNewId(nffg.getFlowRules()));
+		nffg.addFlowRule(flowRule);
+		match = new Match();
+		match.setInput("endpoint:" + endpointId);
+		action = new Action();
+		action.setOutput("vnf:" + vnfId + ":" + portVnfId);
+		flowRule = new FlowRule();
+		flowRule.setMatch(match);
+		flowRule.addAction(action);
+		flowRule.setId(getNewId(nffg.getFlowRules()));
+		nffg.addFlowRule(flowRule);
+	}
 	
 }
