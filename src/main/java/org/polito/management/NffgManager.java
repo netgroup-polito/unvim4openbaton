@@ -73,7 +73,7 @@ public class NffgManager {
 		case HOSTSTACK:
 			HoststackEndPoint hep = new HoststackEndPoint();
 			hep.setConfiguration(endpointArgs[0]);
-			if(hep.getConfiguration().equals("STATIC"))
+			if(hep.getConfiguration().equals("static"))
 				hep.setIp(endpointArgs[1]);
 			wrappedEP.setEndpoint(hep);
 			break;

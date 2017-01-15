@@ -60,9 +60,9 @@ public class NetworkManager {
 		String managementSwId = NffgManager.getNewId(nffg.getVnfs());
 		String managementDhcpId = NffgManager.getNewId(nffg.getVnfs());
 		String managementHoststackId = NffgManager.getNewId(nffg.getEndpoints());
-		NffgManager.createVnf(nffg, managementSwId, null, MANAGEMENT_NETWORK, null, "managementSwitch");
-		NffgManager.createVnf(nffg, managementDhcpId, null, MANAGEMENT_SUBNET, null, "managementDhcp");
-		NffgManager.createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "STATIC", "192.168.1.1");
+		NffgManager.createVnf(nffg, managementSwId, MANAGEMENT_NETWORK, MANAGEMENT_NETWORK, null, "managementSwitch");
+		NffgManager.createVnf(nffg, managementDhcpId, MANAGEMENT_SUBNET, MANAGEMENT_SUBNET, null, "managementDhcp");
+		NffgManager.createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "static", "192.168.4.1");
 		NffgManager.connectVnfToVnf(nffg,managementSwId,managementDhcpId,false);
 		NffgManager.connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
 	}

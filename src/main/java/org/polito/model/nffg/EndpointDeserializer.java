@@ -43,8 +43,9 @@ public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
 			HoststackEndPoint hep = new HoststackEndPoint();
 			JsonNode internalHsNode = node.get("host-stack");
 			hep.setConfiguration(internalHsNode.get("configuration").asText());
-			if(hep.getConfiguration().equals("STATIC"))
+			if(hep.getConfiguration().equals("static"))
 				hep.setIp(internalHsNode.get("ipv4").asText());
+			ep.setEndpoint(hep);
 			break;
 		default:
 			break;

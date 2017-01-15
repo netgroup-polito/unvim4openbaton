@@ -46,7 +46,7 @@ public class UnClient extends VimDriver {
 		          args[0],
 		          args[1],
 		          Integer.parseInt(args[2]),
-		          Integer.parseInt(args[3]),
+		          1,
 		          args[4],
 		          args[5]);
 		    } else if (args.length == 4) {
@@ -55,7 +55,7 @@ public class UnClient extends VimDriver {
 		          args[0],
 		          args[1],
 		          Integer.parseInt(args[2]),
-		          Integer.parseInt(args[3]));
+		          1);
 		    } else
 		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 1);
 		}
