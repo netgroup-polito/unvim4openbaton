@@ -40,7 +40,6 @@ public class NetworkManager {
 		String managementNetId = NffgManager.getVnfsByDescription(nffg,MANAGEMENT_NETWORK).get(0).getId();
 		NffgManager.connectVnfToVnf(nffg,vnfId,managementNetId,true);
 		NffgManager.connectVnfToVnf(nffg,vnfId,network.getExtId(),false);
-		//TODO: Interact with the configuration Service in order to configure the dhcp
 	}
 
 	public static List<Network> getNetworks(Nffg nffg) {
