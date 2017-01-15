@@ -8,10 +8,12 @@ import org.polito.model.nffg.Nffg;
 
 public class ComputeManager {
 
-	public static Server createServer(Nffg nffg, String hostname, String templateImageId, String extId, String keyPair,
-			Set<String> networks, Set<String> securityGroups, String s){
+	public static Server createServer(Nffg nffg, String hostname, String templateImageId, String keyPair,
+			Set<String> networks, Set<String> securityGroups, String userData){
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
 		NffgManager.createVnf(nffg,vnfId,hostname,"Server",null,templateImageId);
+		if(userData!=null)
+			NffgManager.setUserDataToVnf(nffg,vnfId,userData);
 		for(String networkId: networks)
 			NffgManager.connectVnfToVnf(nffg, networkId, vnfId, false);
 		Server createdServer = new Server();

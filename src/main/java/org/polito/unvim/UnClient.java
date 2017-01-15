@@ -61,9 +61,14 @@ public class UnClient extends VimDriver {
 		}
 
 	@Override
-	public Server launchInstance(VimInstance vimInstance, String name, String image, String flavor, String keypair,
+	public Server launchInstance(VimInstance vimInstance, String name, String templateId, String flavor, String keypair,
 			Set<String> network, Set<String> secGroup, String userData) throws VimDriverException {
-		// TODO Auto-generated method stub
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		// Create the server
+		Server server = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
+		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
 		return null;
 	}
 
@@ -139,15 +144,12 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
-			String keyPair, Set<String> networks, Set<String> securityGroups, String s, Map<String, String> floatingIps,
+			String keyPair, Set<String> networks, Set<String> securityGroups, String userData, Map<String, String> floatingIps,
 			Set<Key> keys) throws VimDriverException {
 		synchronized(this)
 		{
 			log.debug("New server required:");
-			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", s: " + (s==null? "null":s));
-			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
-			if(nffg==null)
-				throw new VimDriverException("Illegal state. A nffg must be already deployed");
+			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData));
 			// Given an image name search the template:
 			String templateId=null;
 			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
@@ -156,33 +158,14 @@ public class UnClient extends VimDriver {
 					templateId=template.getId();
 			if(templateId==null)
 				throw new VimDriverException("The required image is no longer present");
-			// Create the server
-			Server server = ComputeManager.createServer(nffg, hostname, templateId, extId, keyPair, networks, securityGroups, s);
-			UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
-			return server;
+			return launchInstance(vimInstance, hostname, templateId, extId, keyPair, networks, securityGroups, userData);
 		}
 	}
 
 	@Override
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
-			String keyPair, Set<String> networks, Set<String> securityGroups, String s) throws VimDriverException {
-		log.debug("New server required:");
-		log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", s: " + (s==null? "null":s));
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
-		if(nffg==null)
-			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		// Given an image name search the template:
-		String templateId=null;
-		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
-		for(VnfTemplate template: templates)
-			if(template.getId().equals(image))
-				templateId=template.getId();
-		if(templateId==null)
-			throw new VimDriverException("The required image is no longer present");
-		// Create the server
-		Server server = ComputeManager.createServer(nffg, hostname, templateId, extId, keyPair, networks, securityGroups, s);
-		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
-		return server;
+			String keyPair, Set<String> networks, Set<String> securityGroups, String userData) throws VimDriverException {
+		return launchInstanceAndWait(vimInstance, hostname, image, extId, keyPair, networks, securityGroups, userData, null, null);
 	}
 
 	@Override

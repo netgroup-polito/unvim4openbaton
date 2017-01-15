@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.polito.model.nffg.AbstractEP.Type;
-import org.openbaton.catalogue.nfvo.Network;
 import org.polito.model.nffg.Action;
 import org.polito.model.nffg.BigSwitch;
 import org.polito.model.nffg.EndpointWrapper;
@@ -182,6 +181,15 @@ public class NffgManager {
 			if(vnf.getId().equals(id))
 				return vnf;
 		return null;
+	}
+
+	public static void setUserDataToVnf(Nffg nffg, String vnfId, String userData) {
+		for(Vnf vnf: nffg.getVnfs())
+			if(vnf.getId().equals(vnfId))
+			{
+				vnf.setUserData(userData);
+				break;
+			}
 	}
 	
 }

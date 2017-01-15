@@ -14,6 +14,8 @@ public class Vnf implements IdAware{
 	@JsonProperty("functional_capability")
 	private String functionalCapability;
 	private String description;
+	@JsonProperty("user_data")
+	private String userData;
 
 	@Override
 	public String getId()
@@ -72,5 +74,13 @@ public class Vnf implements IdAware{
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public String getUserData() {
+		return userData;
+	}
+
+	public void setUserData(String userData) {
+		this.userData = userData;
 	}
 }
