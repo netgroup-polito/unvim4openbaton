@@ -63,19 +63,19 @@ public class UnClient extends VimDriver {
 	@Override
 	public Server launchInstance(VimInstance vimInstance, String name, String templateId, String flavor, String keypair,
 			Set<String> network, Set<String> secGroup, String userData) throws VimDriverException {
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		if(nffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
 		// Create the server
 		Server server = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
-		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		return server;
 	}
 
 	@Override
 	public List<NFVImage> listImages(VimInstance vimInstance) throws VimDriverException {
 		log.debug("Listing images for VimInstance with name: " + vimInstance.getName());
-		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
+		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
 		List<NFVImage> images = new ArrayList<>();
 		for(VnfTemplate template: templates)
 		{
@@ -96,7 +96,7 @@ public class UnClient extends VimDriver {
 	@Override
 	public List<Network> listNetworks(VimInstance vimInstance) throws VimDriverException {
 		log.debug("Listing networks for VimInstance with name: " + vimInstance.getName());
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		List<Network> networks = NetworkManager.getNetworks(nffg);
 		return networks;
 	}
@@ -152,7 +152,7 @@ public class UnClient extends VimDriver {
 			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData));
 			// Given an image name search the template:
 			String templateId=null;
-			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance.getAuthUrl());
+			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
 			for(VnfTemplate template: templates)
 				if(template.getId().equals(image))
 					templateId=template.getId();
@@ -178,14 +178,14 @@ public class UnClient extends VimDriver {
 	public Network createNetwork(VimInstance vimInstance, Network network) throws VimDriverException {
 		log.debug("New network required:");
 		log.debug(network.toString());
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		if(nffg==null)
 		{
 			nffg = NffgManager.createBootNffg("openbaton");
 			NetworkManager.createManagementNetwork(nffg);
 		}
 		NetworkManager.createNetwork(nffg, network);
-		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		return network;
 	}
 
@@ -244,15 +244,15 @@ public class UnClient extends VimDriver {
 			throws VimDriverException {
 		log.debug("New subnet required:");
 		log.debug(subnet.toString());
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance.getAuthUrl(), "openbaton");
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		if(nffg==null)
 			throw new VimDriverException("Illegal state");
 		NetworkManager.createSubnet(nffg, createdNetwork, subnet);
-		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
+		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		DhcpYang yang = new DhcpYang();
 		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet,properties);
 		String mac = NffgManager.getMacControlPort(nffg,subnet.getExtId());
-		UniversalNodeProxy.sendDhcpYang(vimInstance.getAuthUrl(), yang, vimInstance.getTenant(), nffg.getId(), mac);
+		UniversalNodeProxy.sendDhcpYang(vimInstance, yang, vimInstance.getTenant(), nffg.getId(), mac);
 		return subnet;
 	}
 
