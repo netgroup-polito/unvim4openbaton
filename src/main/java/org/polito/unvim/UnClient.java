@@ -69,7 +69,7 @@ public class UnClient extends VimDriver {
 		// Create the server
 		Server server = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
 		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
-		return null;
+		return server;
 	}
 
 	@Override
@@ -251,7 +251,8 @@ public class UnClient extends VimDriver {
 		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
 		DhcpYang yang = new DhcpYang();
 		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet);
-		//TODO: send the yang to the configuration service
+		String mac = NffgManager.getMacControlPort(nffg,subnet.getExtId());
+		UniversalNodeProxy.sendDhcpYang(vimInstance.getAuthUrl(), yang, vimInstance.getTenant(), nffg.getId(), mac);
 		return subnet;
 	}
 

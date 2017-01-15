@@ -10,13 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.openbaton.exceptions.VimDriverException;
-import org.polito.model.nffg.Nffg;
-import org.polito.model.nffg.NffgWrapper;
 import org.polito.model.template.VnfTemplate;
 import org.polito.model.template.VnfTemplateList;
 import org.polito.model.template.VnfTemplateWrapper;
 import org.polito.model.yang.dhcp.DhcpYang;
-import org.polito.unvim.UnClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +66,7 @@ public class DatastoreProxy {
 	{
 		try
 		{
-	        URL url = new URL(datastoreEndpoint + "/?/");
+	        URL url = new URL(datastoreEndpoint + "/vnf/" + vnfId + "/" + graphId + "/" + tenant);
 	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 	        connection.setDoOutput(true);
 	        connection.setRequestMethod("PUT");

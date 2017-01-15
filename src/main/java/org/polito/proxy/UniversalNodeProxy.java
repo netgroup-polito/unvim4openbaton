@@ -13,19 +13,23 @@ import org.polito.model.message.UnConfiguration;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.NffgWrapper;
 import org.polito.model.template.VnfTemplate;
+import org.polito.model.yang.dhcp.DhcpYang;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
 
 public class UniversalNodeProxy {
 	private static Logger log = LoggerFactory.getLogger(UniversalNodeProxy.class);
 
 	public static List<VnfTemplate> getTemplates(String universalNodeEndpoint) throws VimDriverException
+	{
+		String datastoreEndpoint = getDatastoreEndpoint(universalNodeEndpoint);
+		return DatastoreProxy.getTemplates(datastoreEndpoint);
+	}
+
+	private static String getDatastoreEndpoint(String universalNodeEndpoint) throws VimDriverException
 	{
 		UnConfiguration unConf;
 		try
@@ -54,8 +58,7 @@ public class UniversalNodeProxy {
 			log.error(e.getMessage(), e);
 			throw new VimDriverException(e.getMessage());
 		}
-
-		return DatastoreProxy.getTemplates(unConf.getDatastoreEndpoint());
+		return unConf.getDatastoreEndpoint();
 	}
 
 	public static Nffg getNFFG(String universalNodeEndpoint, String NffgId) throws VimDriverException
@@ -122,5 +125,11 @@ public class UniversalNodeProxy {
 			throw new VimDriverException(e.getMessage());
 		}
 		return;
+	}
+
+	public static void sendDhcpYang(String universalNodeEndpoint, DhcpYang yang, String tenant, String graphId, String vnfId) throws VimDriverException
+	{
+		String datastoreEndpoint = getDatastoreEndpoint(universalNodeEndpoint);
+		DatastoreProxy.sendDhcpYang(datastoreEndpoint, yang, tenant, graphId, vnfId);
 	}
 }

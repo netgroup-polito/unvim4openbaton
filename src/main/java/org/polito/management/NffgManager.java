@@ -191,5 +191,14 @@ public class NffgManager {
 				break;
 			}
 	}
+
+	public static String getMacControlPort(Nffg nffg, String vnfId) {
+		for(Vnf vnf: nffg.getVnfs())
+			if(vnf.getId().equals(vnfId))
+				for(Port port: vnf.getPorts())
+					if(port.isTrusted())
+						return port.getMacAddress();
+		return null;
+	}
 	
 }
