@@ -2,6 +2,7 @@ package org.polito.management;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
@@ -67,7 +68,7 @@ public class NetworkManager {
 		NffgManager.connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
 	}
 
-	public static void writeSubnetConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet) throws VimDriverException {
+	public static void writeSubnetConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet, Properties properties) throws VimDriverException {
 		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
 		String netmask = subnetInfo.getNetmask();
 		String defaultGateway = subnetInfo.getLowAddress();
@@ -79,7 +80,9 @@ public class NetworkManager {
 		if(!subnetInfo.isInRange(sectionStartIp))
 			throw new VimDriverException("Network range is too small");
 		YangManager.setServerSection(yang,sectionStartIp,sectionStopIp);
-		YangManager.setServerIpPoolParameters(yang,"100","1000","8.8.8.8","polito.it");
+		YangManager.setServerIpPoolParameters(yang,properties.getProperty("dhcp.defaultLeaseTime")
+				,properties.getProperty("dhcp.maxLeaseTime"),properties.getProperty("dhcp.domainNameServer")
+				,properties.getProperty("dhcp.domainName"));
 		YangManager.setServerDefaultGateway(yang,defaultGateway,netmask);
 		Vnf dhcp = NffgManager.getVnfById(nffg, subnet.getExtId());
 		for(Port port: dhcp.getPorts())

@@ -250,7 +250,7 @@ public class UnClient extends VimDriver {
 		NetworkManager.createSubnet(nffg, createdNetwork, subnet);
 		UniversalNodeProxy.sendNFFG(vimInstance.getAuthUrl(), nffg);
 		DhcpYang yang = new DhcpYang();
-		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet);
+		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet,properties);
 		String mac = NffgManager.getMacControlPort(nffg,subnet.getExtId());
 		UniversalNodeProxy.sendDhcpYang(vimInstance.getAuthUrl(), yang, vimInstance.getTenant(), nffg.getId(), mac);
 		return subnet;
