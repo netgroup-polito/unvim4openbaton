@@ -66,7 +66,7 @@ public class DatastoreProxy {
 	{
 		try
 		{
-	        URL url = new URL(datastoreEndpoint + "/vnf/" + vnfId + "/" + graphId + "/" + tenant);
+	        URL url = new URL(datastoreEndpoint + "/config/vnf/" + vnfId + "/" + graphId + "/" + tenant);
 	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 	        connection.setDoOutput(true);
 	        connection.setRequestMethod("PUT");

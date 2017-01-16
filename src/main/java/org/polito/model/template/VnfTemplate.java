@@ -10,8 +10,9 @@ public class VnfTemplate {
 	private String id;
 	private String name;
 	private boolean expandable;
+	@JsonProperty("uri-image")
 	private String uri;
-	@JsonProperty("uri-type")
+	@JsonProperty("uri-image-type")
 	private String uriType;
 	@JsonProperty("functional-capability")
 	private String functionalCapability;
