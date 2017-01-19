@@ -24,10 +24,7 @@ import org.polito.management.ComputeManager;
 import org.polito.management.NetworkManager;
 import org.polito.management.NffgManager;
 import org.polito.model.nffg.Nffg;
-import org.polito.model.nffg.Vnf;
 import org.polito.model.template.VnfTemplate;
-import org.polito.model.yang.dhcp.DhcpYang;
-import org.polito.proxy.DatastoreProxy;
 import org.polito.proxy.UniversalNodeProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,8 +178,9 @@ public class UnClient extends VimDriver {
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		if(nffg==null)
 		{
+			List<String> unPhisicalPorts = UniversalNodeProxy.getUnPhisicalPorts(vimInstance);
 			nffg = NffgManager.createBootNffg("openbaton");
-			NetworkManager.createManagementNetwork(nffg);
+			NetworkManager.createManagementNetwork(nffg,unPhisicalPorts);
 		}
 		NetworkManager.createNetwork(nffg, network);
 		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
@@ -250,10 +248,7 @@ public class UnClient extends VimDriver {
 		String datastoreEndpoint = UniversalNodeProxy.getDatastoreEndpoint(vimInstance);
 		NetworkManager.createSubnet(nffg, createdNetwork, subnet, datastoreEndpoint);
 		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
-		DhcpYang yang = new DhcpYang();
-		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet,properties);
-		String mac = NffgManager.getMacControlPort(nffg,subnet.getExtId());
-		UniversalNodeProxy.sendDhcpYang(vimInstance, yang, vimInstance.getTenant(), nffg.getId(), mac);
+		NetworkManager.configureSubnet(nffg,subnet,properties,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
 		return subnet;
 	}
 

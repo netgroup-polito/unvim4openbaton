@@ -190,9 +190,4 @@ public class UniversalNodeProxy {
 		return response.toString();
 	}
 
-	public static void sendDhcpYang(VimInstance unInstance, DhcpYang yang, String tenant, String graphId, String vnfId) throws VimDriverException
-	{
-		String datastoreEndpoint = getDatastoreEndpoint(unInstance);
-		DatastoreProxy.sendDhcpYang(datastoreEndpoint, yang, tenant, graphId, vnfId);
-	}
 }

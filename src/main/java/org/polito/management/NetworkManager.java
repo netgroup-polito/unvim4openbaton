@@ -8,7 +8,6 @@ import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.openbaton.catalogue.nfvo.Network;
 import org.openbaton.catalogue.nfvo.Subnet;
-import org.openbaton.catalogue.nfvo.VimInstance;
 import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Port;
@@ -17,43 +16,37 @@ import org.polito.model.template.VnfTemplate;
 import org.polito.model.nffg.AbstractEP.Type;
 import org.polito.model.yang.dhcp.DhcpYang;
 import org.polito.proxy.DatastoreProxy;
-import org.polito.proxy.UniversalNodeProxy;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class NetworkManager {
 	private static final String NETWORK_PREFIX = "SW_";
 	private static final String SUBNET_PREFIX = "DHCP_";
+	private static final String ROUTER_PREFIX = "ROUTER_";
 	private static final String NETWORK = "network";
 	private static final String SUBNET = "subnet";
 	private static final String MANAGEMENT_NETWORK = "manag_network";
 	private static final String MANAGEMENT_SUBNET = "manag_subnet";
+	private static final String MANAGEMENT_ROUTER = "manag_extNet";
 
 
 	public static void createNetwork(Nffg nffg, Network network) {
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
+		NffgManager.createVnf(nffg,vnfId,NETWORK_PREFIX + network.getName(),NETWORK,"switch",null);
 		network.setExtId(vnfId);
-		// the switch representing the network will be deployed on the createSubnet command
+		// attach the new switch to the router
+		String managemtnRouterId = NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId();
+		NffgManager.connectVnfToVnf(nffg,vnfId,managemtnRouterId,false);
 	}
 
 	public static void createSubnet(Nffg nffg, Network network, Subnet subnet, String datastoreEndpoint) throws VimDriverException
 	{
-		boolean netAlreadyDeployed = false;
-		for(Vnf vnf: NffgManager.getVnfsByDescription(nffg, NETWORK))
-			if(vnf.getId().equals(network.getExtId()))
-			{
-				netAlreadyDeployed=true;
-				break;
-			}
-		if(!netAlreadyDeployed)
-			NffgManager.createVnf(nffg,network.getExtId(),NETWORK_PREFIX + network.getName(),NETWORK,"switch",null);
-
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
 		NffgManager.createVnf(nffg,vnfId,SUBNET_PREFIX + subnet.getName(),SUBNET,null,"configurableDhcp");
-		VnfTemplate vnfTemplate = DatastoreProxy.getTemplate(datastoreEndpoint, "configurableDhcp");
-		NffgManager.setTemplateToVnf(nffg,vnfId,vnfTemplate);
+		if(datastoreEndpoint!=null)
+		{
+			VnfTemplate vnfTemplate = DatastoreProxy.getTemplate(datastoreEndpoint, "configurableDhcp");
+			NffgManager.setTemplateToVnf(nffg,vnfId,vnfTemplate);
+		}
 		subnet.setExtId(vnfId);
 		String managementNetId = NffgManager.getVnfsByDescription(nffg,MANAGEMENT_NETWORK).get(0).getId();
 		NffgManager.connectVnfToVnf(nffg,vnfId,managementNetId,true);
@@ -74,18 +67,24 @@ public class NetworkManager {
 		return networks;
 	}
 
-	public static void createManagementNetwork(Nffg nffg) {
+	public static void createManagementNetwork(Nffg nffg, List<String> unPhisicalPorts) {
 		String managementSwId = NffgManager.getNewId(nffg.getVnfs());
 		String managementDhcpId = NffgManager.getNewId(nffg.getVnfs());
+		String managementRouterId = NffgManager.getNewId(nffg.getVnfs());
 		String managementHoststackId = NffgManager.getNewId(nffg.getEndpoints());
+		String managementInterfaceId = NffgManager.getNewId(nffg.getEndpoints());
 		NffgManager.createVnf(nffg, managementSwId, NETWORK_PREFIX + MANAGEMENT_NETWORK, MANAGEMENT_NETWORK, null, "managementSwitch");
 		NffgManager.createVnf(nffg, managementDhcpId, SUBNET_PREFIX + MANAGEMENT_SUBNET, MANAGEMENT_SUBNET, null, "managementDhcp");
+		NffgManager.createVnf(nffg, managementRouterId, ROUTER_PREFIX + MANAGEMENT_ROUTER, MANAGEMENT_ROUTER, null, "managementRouter");
 		NffgManager.createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "static", "192.168.4.1");
+		NffgManager.createEndpoint(nffg,managementInterfaceId,"managementInterface",Type.INTERFACE, unPhisicalPorts.get(0));
 		NffgManager.connectVnfToVnf(nffg,managementSwId,managementDhcpId,false);
+		NffgManager.connectVnfToVnf(nffg,managementRouterId,managementSwId,true);
 		NffgManager.connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
+		NffgManager.connectEndpointToVnf(nffg,managementInterfaceId,managementRouterId);
 	}
 
-	public static void writeSubnetConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet, Properties properties) throws VimDriverException {
+	private static void writeDhcpConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet, Properties properties) throws VimDriverException {
 		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
 		String netmask = subnetInfo.getNetmask();
 		String defaultGateway = subnetInfo.getLowAddress();
@@ -109,6 +108,10 @@ public class NetworkManager {
 				YangManager.addInterface(yang, port.getName(), dhcpUserPortIp, "static", "dhcp", "");
 	}
 
+	private static void writeRouterConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet, Properties properties) throws VimDriverException {
+		// TODO
+	}
+
 	private static final String nextIpAddress(final String input) {
 	    final String[] tokens = input.split("\\.");
 	    if (tokens.length != 4)
@@ -129,6 +132,17 @@ public class NetworkManager {
 	    .append(tokens[2]).append('.')
 	    .append(tokens[3])
 	    .toString();
+	}
+
+	public static void configureSubnet(Nffg nffg, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
+		DhcpYang yang = new DhcpYang();
+		NetworkManager.writeDhcpConfiguration(nffg,yang,subnet,properties);
+		String mac = NffgManager.getMacControlPort(nffg,subnet.getExtId());
+		DatastoreProxy.sendDhcpYang(configurationService, yang, "openbaton", nffg.getId(), mac);
+		yang = new DhcpYang();
+		NetworkManager.writeRouterConfiguration(nffg,yang,subnet,properties);
+		mac = NffgManager.getMacControlPort(nffg,NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId());
+		DatastoreProxy.sendDhcpYang(configurationService, yang, "openbaton", nffg.getId(), mac);
 	}
 
 }
