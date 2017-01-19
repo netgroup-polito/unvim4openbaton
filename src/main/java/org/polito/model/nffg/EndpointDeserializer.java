@@ -19,7 +19,7 @@ public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
 	{
 		this(null);
 	}
-	
+
 	public EndpointDeserializer(Class<EndpointWrapper> t)
 	{
 		super(t);

@@ -68,5 +68,5 @@ public class Port {
 	public void setTechnology(String technology) {
 		this.technology = technology;
 	}
-	
+
 }

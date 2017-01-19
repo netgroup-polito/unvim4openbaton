@@ -3,6 +3,9 @@ package org.polito.model.nffg;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.polito.model.template.VnfTemplate;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Vnf implements IdAware{
@@ -16,6 +19,8 @@ public class Vnf implements IdAware{
 	private String description;
 	@JsonProperty("user_data")
 	private String userData;
+	@JsonIgnore
+	private VnfTemplate templateObject;
 
 	@Override
 	public String getId()
@@ -82,5 +87,13 @@ public class Vnf implements IdAware{
 
 	public void setUserData(String userData) {
 		this.userData = userData;
+	}
+
+	public void setTemplateObject(VnfTemplate vnfTemplate) {
+		templateObject = vnfTemplate;
+	}
+
+	public VnfTemplate getTemplateObject() {
+		return templateObject;
 	}
 }

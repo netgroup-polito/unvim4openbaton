@@ -34,11 +34,11 @@ public class DatastoreProxy {
 	        connection.setRequestProperty("Accept", "application/json");
 	        int responseCode = connection.getResponseCode();
 			//TODO: Deal with responseCode different from 200
-	
+
 			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 			String inputLine;
 			StringBuffer response = new StringBuffer();
-	
+
 			while ((inputLine = in.readLine()) != null) {
 				response.append(inputLine);
 			}
@@ -60,6 +60,40 @@ public class DatastoreProxy {
 			templates.add(vnfTemplateWrapper.getTemplate());
 		}
 		return templates;
+	}
+
+	public static VnfTemplate getTemplate(String datastoreEndpoint, String templateId) throws VimDriverException
+	{
+		VnfTemplate template;
+		try
+		{
+	        URL url = new URL(datastoreEndpoint + "/v2/nf_template/" + templateId);
+	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+	        connection.setRequestMethod("GET");
+	        connection.setRequestProperty("Accept", "application/json");
+	        int responseCode = connection.getResponseCode();
+			//TODO: Deal with responseCode different from 200
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+			in.close();
+
+			ObjectMapper mapper = new ObjectMapper();
+			template = mapper.readValue(response.toString(), VnfTemplate.class);
+
+		}
+		catch(IOException e)
+		{
+			log.error(e.getMessage(), e);
+			throw new VimDriverException(e.getMessage());
+		}
+		template.setId(templateId);
+		return template;
 	}
 
 	public static void sendDhcpYang(String datastoreEndpoint, DhcpYang yang, String tenant, String graphId, String vnfId) throws VimDriverException

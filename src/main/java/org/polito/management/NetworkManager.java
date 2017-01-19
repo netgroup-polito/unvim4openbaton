@@ -13,8 +13,10 @@ import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Port;
 import org.polito.model.nffg.Vnf;
+import org.polito.model.template.VnfTemplate;
 import org.polito.model.nffg.AbstractEP.Type;
 import org.polito.model.yang.dhcp.DhcpYang;
+import org.polito.proxy.DatastoreProxy;
 import org.polito.proxy.UniversalNodeProxy;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -36,7 +38,7 @@ public class NetworkManager {
 		// the switch representing the network will be deployed on the createSubnet command
 	}
 
-	public static void createSubnet(Nffg nffg, Network network, Subnet subnet)
+	public static void createSubnet(Nffg nffg, Network network, Subnet subnet, String datastoreEndpoint) throws VimDriverException
 	{
 		boolean netAlreadyDeployed = false;
 		for(Vnf vnf: NffgManager.getVnfsByDescription(nffg, NETWORK))
@@ -50,6 +52,8 @@ public class NetworkManager {
 
 		String vnfId = NffgManager.getNewId(nffg.getVnfs());
 		NffgManager.createVnf(nffg,vnfId,SUBNET_PREFIX + subnet.getName(),SUBNET,null,"configurableDhcp");
+		VnfTemplate vnfTemplate = DatastoreProxy.getTemplate(datastoreEndpoint, "configurableDhcp");
+		NffgManager.setTemplateToVnf(nffg,vnfId,vnfTemplate);
 		subnet.setExtId(vnfId);
 		String managementNetId = NffgManager.getVnfsByDescription(nffg,MANAGEMENT_NETWORK).get(0).getId();
 		NffgManager.connectVnfToVnf(nffg,vnfId,managementNetId,true);

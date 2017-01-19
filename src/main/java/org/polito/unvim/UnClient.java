@@ -171,7 +171,7 @@ public class UnClient extends VimDriver {
 	@Override
 	public void deleteServerByIdAndWait(VimInstance vimInstance, String id) throws VimDriverException {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -247,7 +247,8 @@ public class UnClient extends VimDriver {
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		if(nffg==null)
 			throw new VimDriverException("Illegal state");
-		NetworkManager.createSubnet(nffg, createdNetwork, subnet);
+		String datastoreEndpoint = UniversalNodeProxy.getDatastoreEndpoint(vimInstance);
+		NetworkManager.createSubnet(nffg, createdNetwork, subnet, datastoreEndpoint);
 		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		DhcpYang yang = new DhcpYang();
 		NetworkManager.writeSubnetConfiguration(nffg,yang,subnet,properties);

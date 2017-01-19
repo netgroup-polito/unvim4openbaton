@@ -17,7 +17,7 @@ public class EndpointSerializer extends StdSerializer<EndpointWrapper>{
 	{
 		this(null);
 	}
-	
+
 	public EndpointSerializer(Class<EndpointWrapper> t)
 	{
 		super(t);

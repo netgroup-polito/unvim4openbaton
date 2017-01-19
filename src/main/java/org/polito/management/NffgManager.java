@@ -17,6 +17,7 @@ import org.polito.model.nffg.Match;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Port;
 import org.polito.model.nffg.Vnf;
+import org.polito.model.template.VnfTemplate;
 
 public class NffgManager {
 	private static SecureRandom random = new SecureRandom();
@@ -108,17 +109,53 @@ public class NffgManager {
 
 	private static String createPort(Nffg nffg, String vnfId, boolean trusted) {
 		int portNumb=0;
-		Vnf vnfToUpdate=null;
-		for(Vnf vnf: nffg.getVnfs())
-			if(vnf.getId().equals(vnfId))
-			{
-				vnfToUpdate=vnf;
-				break;
-			}
+		Vnf vnfToUpdate=getVnfById(nffg, vnfId);
+		VnfTemplate template = vnfToUpdate.getTemplateObject();
 		List<Port> ports = vnfToUpdate.getPorts();
 		portNumb+=ports.size();
+		String newPortName=null;
+		if(template==null)
+			newPortName = "eth"+portNumb;
+		else
+		{
+			String possiblePortName=null;
+			boolean unboundedCase=false;
+			boolean foundCandidate=false;
+			for(org.polito.model.template.Port templatePort: template.getPorts())
+			{
+				String prefix = templatePort.getName(); // example: eth | ens
+				String position = templatePort.getPosition(); //example: 0-10 | 0-N | 0-0
+				int firstPosition, lastPosition=100;
+				firstPosition = Integer.parseInt(position.substring(0, position.indexOf('-')));
+				String lastPositionString = position.substring(position.indexOf('-')+1);
+				if(lastPositionString.equals("N"))
+					unboundedCase=true;
+				else
+					lastPosition=Integer.parseInt(lastPositionString);
+
+				for(int pos=firstPosition; foundCandidate==false && (unboundedCase==true || pos<=lastPosition); pos++ )
+				{
+					possiblePortName=prefix+pos;
+					foundCandidate=true;
+					for(Port vnfExistingPort: ports)
+						if(vnfExistingPort.getName().equals(possiblePortName))
+						{
+							foundCandidate=false;
+							break;
+						}
+				}
+
+				if(foundCandidate)
+				{
+					newPortName=possiblePortName;
+					break;
+				}
+			}
+			//TODO: if(!foundCandidate)
+			// launch exception
+		}
+
 		String newPortId = "port:"+portNumb;
-		String newPortName = "eth"+portNumb;
 		Port newPort = new Port();
 		newPort.setId(newPortId);
 		newPort.setName(newPortName);
@@ -200,5 +237,9 @@ public class NffgManager {
 						return port.getMacAddress();
 		return null;
 	}
-	
+
+	public static void setTemplateToVnf(Nffg nffg, String vnfId, VnfTemplate vnfTemplate) {
+		getVnfById(nffg,vnfId).setTemplateObject(vnfTemplate);
+	}
+
 }

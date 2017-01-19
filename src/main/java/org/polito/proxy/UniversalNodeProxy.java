@@ -31,7 +31,7 @@ public class UniversalNodeProxy {
 		return DatastoreProxy.getTemplates(datastoreEndpoint);
 	}
 
-	private static String getDatastoreEndpoint(VimInstance unInstance) throws VimDriverException
+	public static String getDatastoreEndpoint(VimInstance unInstance) throws VimDriverException
 	{
 		UnConfiguration unConf;
 		try
