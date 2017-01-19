@@ -33,7 +33,18 @@ public class UniversalNodeProxy {
 
 	public static String getDatastoreEndpoint(VimInstance unInstance) throws VimDriverException
 	{
-		UnConfiguration unConf;
+		UnConfiguration unConf = getUnConfiguration(unInstance);
+		return unConf.getDatastoreEndpoint();
+	}
+
+	public static List<String> getUnPhisicalPorts(VimInstance unInstance) throws VimDriverException
+	{
+		UnConfiguration unConf = getUnConfiguration(unInstance);
+		return unConf.getUnPhisicalPorts();
+	}
+
+	private static UnConfiguration getUnConfiguration(VimInstance unInstance) throws VimDriverException {
+		UnConfiguration unConf = null;
 		try
 		{
 			String token = Authenticate(unInstance);
@@ -63,7 +74,7 @@ public class UniversalNodeProxy {
 			log.error(e.getMessage(), e);
 			throw new VimDriverException(e.getMessage());
 		}
-		return unConf.getDatastoreEndpoint();
+		return unConf;
 	}
 
 	public static Nffg getNFFG(VimInstance unInstance, String NffgId) throws VimDriverException
