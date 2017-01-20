@@ -86,8 +86,12 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public List<Server> listServer(VimInstance vimInstance) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return new ArrayList<>();
+		List<Server> servers = new ArrayList<>();
+		log.debug("Listing server for VimInstance with name: " + vimInstance.getName());
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg!=null)
+			servers = ComputeManager.getServers(nffg);
+		return servers;
 	}
 
 	@Override
