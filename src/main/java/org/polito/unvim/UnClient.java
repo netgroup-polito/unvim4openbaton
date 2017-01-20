@@ -171,8 +171,13 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public void deleteServerByIdAndWait(VimInstance vimInstance, String id) throws VimDriverException {
-		// TODO Auto-generated method stub
-
+		log.debug("Delete required for server with id: " + id);
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		// Create the server
+		ComputeManager.destroyServer(nffg, id);
+		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 	}
 
 	@Override
@@ -183,6 +188,8 @@ public class UnClient extends VimDriver {
 		if(nffg==null)
 		{
 			List<String> unPhisicalPorts = UniversalNodeProxy.getUnPhisicalPorts(vimInstance);
+			if(unPhisicalPorts.size()==0)
+				throw new VimDriverException("The Universal Node has 0 ports able to reach external network!");
 			nffg = NffgManager.createBootNffg("openbaton");
 			NetworkManager.createManagementNetwork(nffg,unPhisicalPorts);
 		}

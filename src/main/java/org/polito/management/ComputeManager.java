@@ -42,4 +42,8 @@ public class ComputeManager {
 		return servers;
 	}
 
+	public static void destroyServer(Nffg nffg, String id) {
+		NffgManager.destroyVnf(nffg,id);
+	}
+
 }

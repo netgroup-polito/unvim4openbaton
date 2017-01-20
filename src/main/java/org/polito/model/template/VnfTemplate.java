@@ -28,6 +28,9 @@ public class VnfTemplate {
 	private int swapDiskSize;
 	@JsonProperty("CPUrequirements")
 	private CpuRequirements cpuRequirements;
+	@JsonProperty("uri-yang")
+	private String uriYang;
+
 	private List<Port> ports;
 
 	public String getId() {
@@ -132,6 +135,14 @@ public class VnfTemplate {
 
 	public void setPorts(List<Port> ports) {
 		this.ports = ports;
+	}
+
+	public String getUriYang() {
+		return uriYang;
+	}
+
+	public void setUriYang(String uriYang) {
+		this.uriYang = uriYang;
 	}
 
 }

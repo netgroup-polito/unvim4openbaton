@@ -269,4 +269,45 @@ public class NffgManager {
 		return found;
 	}
 
+	public static void destroyVnf(Nffg nffg, String id) {
+		// Firstly destroy links:
+		List<FlowRule> flowRulesToDelete = new ArrayList<>();
+		String ruleEndpointToDelete = "vnf:"+ id ;
+		for(FlowRule flowRule: nffg.getFlowRules())
+		{
+			Match match = flowRule.getMatch();
+			if(match.getInput().contains(ruleEndpointToDelete))
+			{
+				flowRulesToDelete.add(flowRule);
+				continue;
+			}
+			for(Action action: flowRule.getActions())
+			{
+				if(action.getOutput().contains(ruleEndpointToDelete))
+				{
+					flowRulesToDelete.add(flowRule);
+					String[] splittedMatch = match.getInput().split(":");
+					if(splittedMatch[0].equals("vnf"))
+						deleteVnfPort(nffg,splittedMatch[1],splittedMatch[2]+":"+splittedMatch[3]);
+				}
+
+			}
+		}
+		nffg.getFlowRules().removeAll(flowRulesToDelete);
+		// Then destroy the VNF
+		nffg.getVnfs().remove(getVnfById(nffg, id));
+	}
+
+	private static void deleteVnfPort(Nffg nffg, String vnfId, String portId) {
+		Vnf vnf = getVnfById(nffg, vnfId);
+		Port portToDelete = null;
+		for(Port port: vnf.getPorts())
+			if(port.getId().equals(portId))
+			{
+				portToDelete = port;
+				break;
+			}
+		vnf.getPorts().remove(portToDelete);
+	}
+
 }
