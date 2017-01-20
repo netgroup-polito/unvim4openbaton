@@ -248,7 +248,7 @@ public class UnClient extends VimDriver {
 		String datastoreEndpoint = UniversalNodeProxy.getDatastoreEndpoint(vimInstance);
 		NetworkManager.createSubnet(nffg, createdNetwork, subnet, datastoreEndpoint);
 		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
-		NetworkManager.configureSubnet(nffg,subnet,properties,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
+		NetworkManager.configureSubnet(nffg,createdNetwork,subnet,properties,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
 		return subnet;
 	}
 

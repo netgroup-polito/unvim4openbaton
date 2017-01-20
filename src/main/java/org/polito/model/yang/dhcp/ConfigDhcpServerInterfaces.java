@@ -3,6 +3,9 @@ package org.polito.model.yang.dhcp;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import org.polito.model.yang.IfEntry;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;

@@ -14,6 +14,7 @@ import org.polito.model.template.VnfTemplate;
 import org.polito.model.template.VnfTemplateList;
 import org.polito.model.template.VnfTemplateWrapper;
 import org.polito.model.yang.dhcp.DhcpYang;
+import org.polito.model.yang.nat.NatYang;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +98,37 @@ public class DatastoreProxy {
 	}
 
 	public static void sendDhcpYang(String datastoreEndpoint, DhcpYang yang, String tenant, String graphId, String vnfId) throws VimDriverException
+	{
+		try
+		{
+	        URL url = new URL(datastoreEndpoint + "/config/vnf/" + vnfId + "/" + graphId + "/" + tenant);
+	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+	        connection.setDoOutput(true);
+	        connection.setRequestMethod("PUT");
+	        connection.setRequestProperty("Content-Type", "application/json");
+
+	        ObjectMapper mapper = new ObjectMapper();
+			mapper.setSerializationInclusion(Include.NON_NULL);
+			String jsonInString = mapper.writeValueAsString(yang);
+			System.out.println(jsonInString);
+
+			OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
+			out.write(jsonInString);
+			out.close();
+
+	        int responseCode = connection.getResponseCode();
+			//TODO: Deal with responseCode different from 200
+
+		}
+		catch(IOException e)
+		{
+			log.error(e.getMessage(), e);
+			throw new VimDriverException(e.getMessage());
+		}
+		return;
+	}
+
+	public static void sendNatYang(String datastoreEndpoint, NatYang yang, String tenant, String graphId, String vnfId) throws VimDriverException
 	{
 		try
 		{

@@ -1,5 +1,6 @@
 package org.polito.management;
 
+import java.lang.annotation.Native;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -15,6 +16,7 @@ import org.polito.model.nffg.Vnf;
 import org.polito.model.template.VnfTemplate;
 import org.polito.model.nffg.AbstractEP.Type;
 import org.polito.model.yang.dhcp.DhcpYang;
+import org.polito.model.yang.nat.NatYang;
 import org.polito.proxy.DatastoreProxy;
 
 
@@ -84,34 +86,6 @@ public class NetworkManager {
 		NffgManager.connectEndpointToVnf(nffg,managementInterfaceId,managementRouterId);
 	}
 
-	private static void writeDhcpConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet, Properties properties) throws VimDriverException {
-		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
-		String netmask = subnetInfo.getNetmask();
-		String defaultGateway = subnetInfo.getLowAddress();
-		String sectionStopIp = subnetInfo.getHighAddress();
-		String dhcpUserPortIp = nextIpAddress(defaultGateway);
-		if(!subnetInfo.isInRange(dhcpUserPortIp))
-			throw new VimDriverException("Network range is too small");
-		String sectionStartIp = nextIpAddress(dhcpUserPortIp);
-		if(!subnetInfo.isInRange(sectionStartIp))
-			throw new VimDriverException("Network range is too small");
-		YangManager.setServerSection(yang,sectionStartIp,sectionStopIp);
-		YangManager.setServerIpPoolParameters(yang,properties.getProperty("dhcp.defaultLeaseTime")
-				,properties.getProperty("dhcp.maxLeaseTime"),properties.getProperty("dhcp.domainNameServer")
-				,properties.getProperty("dhcp.domainName"));
-		YangManager.setServerDefaultGateway(yang,defaultGateway,netmask);
-		Vnf dhcp = NffgManager.getVnfById(nffg, subnet.getExtId());
-		for(Port port: dhcp.getPorts())
-			if(port.isTrusted())
-				YangManager.addInterface(yang, port.getName(), "", "dhcp", "config", defaultGateway);
-			else
-				YangManager.addInterface(yang, port.getName(), dhcpUserPortIp, "static", "dhcp", "");
-	}
-
-	private static void writeRouterConfiguration(Nffg nffg, DhcpYang yang, Subnet subnet, Properties properties) throws VimDriverException {
-		// TODO
-	}
-
 	private static final String nextIpAddress(final String input) {
 	    final String[] tokens = input.split("\\.");
 	    if (tokens.length != 4)
@@ -134,15 +108,51 @@ public class NetworkManager {
 	    .toString();
 	}
 
-	public static void configureSubnet(Nffg nffg, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
-		DhcpYang yang = new DhcpYang();
-		NetworkManager.writeDhcpConfiguration(nffg,yang,subnet,properties);
-		String mac = NffgManager.getMacControlPort(nffg,subnet.getExtId());
-		DatastoreProxy.sendDhcpYang(configurationService, yang, "openbaton", nffg.getId(), mac);
-		yang = new DhcpYang();
-		NetworkManager.writeRouterConfiguration(nffg,yang,subnet,properties);
-		mac = NffgManager.getMacControlPort(nffg,NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId());
-		DatastoreProxy.sendDhcpYang(configurationService, yang, "openbaton", nffg.getId(), mac);
+	public static void configureSubnet(Nffg nffg, Network createdNetwork, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
+		// Calculate network parameters
+		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
+		String netmask = subnetInfo.getNetmask();
+		String defaultGateway = subnetInfo.getLowAddress();
+		String sectionStopIp = subnetInfo.getHighAddress();
+		String dhcpUserPortIp = nextIpAddress(defaultGateway);
+		if(!subnetInfo.isInRange(dhcpUserPortIp))
+			throw new VimDriverException("Network range is too small");
+		String sectionStartIp = nextIpAddress(dhcpUserPortIp);
+		if(!subnetInfo.isInRange(sectionStartIp))
+			throw new VimDriverException("Network range is too small");
+
+		// Create Nat Yang
+		NatYang natYang = new NatYang();
+		Vnf router = NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0);
+		for(Port port: router.getPorts())
+			if(port.isTrusted())
+				YangManager.addInterface(natYang, port.getName(), "", "dhcp", "config", "");
+			else if(NffgManager.areConnected(nffg, router.getId(), port.getId(), createdNetwork.getExtId()))
+				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", "");
+			else if(NffgManager.areConnected(nffg, router.getId(), port.getId(), NffgManager.getEndpointByName(nffg,"managementInterface").get(0).getId()))
+				YangManager.addInterface(natYang, port.getName(), "", "dhcp", "wan", "");
+
+		// Send the yang
+		String routerMacControlPort = NffgManager.getMacControlPort(nffg,NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId());
+		DatastoreProxy.sendNatYang(configurationService, natYang, "openbaton", nffg.getId(), routerMacControlPort);
+
+		// Create Dhcp Yang
+		DhcpYang dhcpYang = new DhcpYang();
+		YangManager.setServerSection(dhcpYang,sectionStartIp,sectionStopIp);
+		YangManager.setServerIpPoolParameters(dhcpYang,properties.getProperty("dhcp.defaultLeaseTime")
+				,properties.getProperty("dhcp.maxLeaseTime"),properties.getProperty("dhcp.domainNameServer")
+				,properties.getProperty("dhcp.domainName"));
+		YangManager.setServerDefaultGateway(dhcpYang,defaultGateway,netmask);
+		Vnf dhcp = NffgManager.getVnfById(nffg, subnet.getExtId());
+		for(Port port: dhcp.getPorts())
+			if(port.isTrusted())
+				YangManager.addInterface(dhcpYang, port.getName(), "", "dhcp", "config", "");
+			else
+				YangManager.addInterface(dhcpYang, port.getName(), dhcpUserPortIp, "static", "dhcp", defaultGateway);
+
+		// Send the yang
+		String dhcpMacControlPort = NffgManager.getMacControlPort(nffg,subnet.getExtId());
+		DatastoreProxy.sendDhcpYang(configurationService, dhcpYang, "openbaton", nffg.getId(), dhcpMacControlPort);
 	}
 
 }

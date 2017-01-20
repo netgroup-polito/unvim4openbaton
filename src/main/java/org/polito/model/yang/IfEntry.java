@@ -1,5 +1,5 @@
 
-package org.polito.model.yang.dhcp;
+package org.polito.model.yang;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;

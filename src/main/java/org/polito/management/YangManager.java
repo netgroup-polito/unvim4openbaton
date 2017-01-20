@@ -1,11 +1,11 @@
 package org.polito.management;
 
-import org.apache.commons.net.util.SubnetUtils;
+import org.polito.model.yang.IfEntry;
 import org.polito.model.yang.dhcp.DhcpYang;
 import org.polito.model.yang.dhcp.GatewayIp;
 import org.polito.model.yang.dhcp.GlobalIpPool;
-import org.polito.model.yang.dhcp.IfEntry;
 import org.polito.model.yang.dhcp.Section;
+import org.polito.model.yang.nat.NatYang;
 
 public class YangManager {
 
@@ -35,12 +35,24 @@ public class YangManager {
 
 	public static void addInterface(DhcpYang yang, String name, String address, String configuration,
 			String type, String defaultGw) {
+		IfEntry iface = createIfEntry(name, address, configuration, type, defaultGw);
+		yang.getConfigDhcpServerInterfaces().getIfEntry().add(iface);
+	}
+
+	private static IfEntry createIfEntry(String name, String address, String configuration, String type,
+			String defaultGw) {
 		IfEntry iface = new IfEntry();
 		iface.setName(name);
 		iface.setAddress(address);
 		iface.setConfigurationType(configuration);
 		iface.setType(type);
 		iface.setDefaultGw(defaultGw);
-		yang.getConfigDhcpServerInterfaces().getIfEntry().add(iface);
+		return iface;
+	}
+
+	public static void addInterface(NatYang yang, String name, String address, String configuration,
+			String type, String defaultGw) {
+		IfEntry iface = createIfEntry(name, address, configuration, type, defaultGw);
+		yang.getConfigNatInterfaces().getIfEntry().add(iface);
 	}
 }

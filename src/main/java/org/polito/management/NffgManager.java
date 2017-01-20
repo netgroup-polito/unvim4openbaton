@@ -242,4 +242,31 @@ public class NffgManager {
 		getVnfById(nffg,vnfId).setTemplateObject(vnfTemplate);
 	}
 
+	public static List<EndpointWrapper> getEndpointByName(Nffg nffg, String endpointName) {
+		List<EndpointWrapper> endpoints = new ArrayList<EndpointWrapper>();
+		if(nffg!=null)
+			for(EndpointWrapper endpoint: nffg.getEndpoints())
+				if(endpoint.getName().equals(endpointName))
+					endpoints.add(endpoint);
+		return endpoints;
+	}
+
+	public static boolean areConnected(Nffg nffg, String vnfId, String portId, String otherId) {
+		String matchToSerach = "vnf:"+ vnfId + ":" + portId;
+		boolean found=false;
+		for(FlowRule flowRule: nffg.getFlowRules())
+		{
+			if(flowRule.getMatch().getInput().equals(matchToSerach))
+				for(Action action: flowRule.getActions())
+					if(action.getOutput().contains(otherId))
+					{
+						found=true;
+						break;
+					}
+			if(found)
+				break;
+		}
+		return found;
+	}
+
 }
