@@ -1,9 +1,10 @@
 package org.polito.management;
 
-import java.lang.annotation.Native;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
@@ -55,18 +56,42 @@ public class NetworkManager {
 		NffgManager.connectVnfToVnf(nffg,vnfId,network.getExtId(),false);
 	}
 
-	public static List<Network> getNetworks(Nffg nffg) {
+	public static List<Network> getNetworks(Nffg nffg, String configurationService) throws VimDriverException {
 		List<Network> networks = new ArrayList<>();
 		List<Vnf> vnfList = NffgManager.getVnfsByDescription(nffg,NETWORK);
 		for(Vnf vnf: vnfList)
-		{
-			Network net = new Network();
-			net.setExtId(vnf.getId());
-			net.setName(vnf.getName().replaceAll(NETWORK_PREFIX, ""));
-			networks.add(net);
-			//TODO: Set subnets
-		}
+			networks.add(getNetwork(nffg, vnf.getId(),configurationService));
 		return networks;
+	}
+
+	public static Network getNetwork(Nffg nffg, String netId, String configurationService) throws VimDriverException {
+		Vnf vnfNet = NffgManager.getVnfById(nffg, netId);
+		Network net = new Network();
+		net.setExtId(vnfNet.getId());
+		net.setName(vnfNet.getName().replaceAll(NETWORK_PREFIX, ""));
+		Set<Subnet> subnets = new HashSet<>();
+		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, MANAGEMENT_SUBNET))
+			for(Port vnfNetPort: vnfNet.getPorts())
+				if(NffgManager.areConnected(nffg, vnfNet.getId(), vnfNetPort.getId(), vnfSub.getId()))
+				{
+					subnets.add(getSubnet(nffg, vnfSub, configurationService));
+					break;
+				}
+		net.setSubnets(subnets);
+		return net;
+	}
+
+	private static Subnet getSubnet(Nffg nffg, Vnf vnfSubnet, String configurationService) throws VimDriverException {
+		DhcpYang dhcpYang = DatastoreProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
+		String gatewayIp = YangManager.getServerDefaultGatewayIp(dhcpYang);
+		String gatewayMask = YangManager.getServerDefaultGatewayMask(dhcpYang);
+		SubnetInfo subnetInfo = new SubnetUtils(gatewayIp,gatewayMask).getInfo();
+		Subnet subnet = new Subnet();
+		subnet.setName(vnfSubnet.getName().replaceAll(SUBNET_PREFIX, ""));
+		subnet.setExtId(vnfSubnet.getId());
+		subnet.setGatewayIp(gatewayIp);
+		subnet.setCidr(subnetInfo.getCidrSignature());
+		return subnet;
 	}
 
 	public static void createManagementNetwork(Nffg nffg, List<String> unPhisicalPorts) {
@@ -126,11 +151,11 @@ public class NetworkManager {
 		Vnf router = NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0);
 		for(Port port: router.getPorts())
 			if(port.isTrusted())
-				YangManager.addInterface(natYang, port.getName(), "", "dhcp", "config", "");
+				YangManager.addInterface(natYang, port.getName(), "10.0.0.1", "dhcp", "config", "");
 			else if(NffgManager.areConnected(nffg, router.getId(), port.getId(), createdNetwork.getExtId()))
 				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", "");
 			else if(NffgManager.areConnected(nffg, router.getId(), port.getId(), NffgManager.getEndpointByName(nffg,"managementInterface").get(0).getId()))
-				YangManager.addInterface(natYang, port.getName(), "", "dhcp", "wan", "");
+				YangManager.addInterface(natYang, port.getName(), "10.0.0.1", "dhcp", "wan", "");
 
 		// Send the yang
 		String routerMacControlPort = NffgManager.getMacControlPort(nffg,NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId());
@@ -146,13 +171,34 @@ public class NetworkManager {
 		Vnf dhcp = NffgManager.getVnfById(nffg, subnet.getExtId());
 		for(Port port: dhcp.getPorts())
 			if(port.isTrusted())
-				YangManager.addInterface(dhcpYang, port.getName(), "", "dhcp", "config", "");
+				YangManager.addInterface(dhcpYang, port.getName(), "10.0.0.1", "dhcp", "config", "");
 			else
 				YangManager.addInterface(dhcpYang, port.getName(), dhcpUserPortIp, "static", "dhcp", defaultGateway);
 
 		// Send the yang
 		String dhcpMacControlPort = NffgManager.getMacControlPort(nffg,subnet.getExtId());
 		DatastoreProxy.sendDhcpYang(configurationService, dhcpYang, "openbaton", nffg.getId(), dhcpMacControlPort);
+	}
+
+	public static void deleteNetwork(Nffg nffg, String id) {
+		NffgManager.destroyVnf(nffg,id);
+	}
+
+	public static void deleteSubnet(Nffg nffg, String id) {
+		NffgManager.destroyVnf(nffg,id);
+	}
+
+	public static List<String> getSubnetsIds(Nffg nffg, String networkId) {
+		List<String> subnetsIds = new ArrayList<>();
+		Vnf vnfNet = NffgManager.getVnfById(nffg, networkId);
+		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, SUBNET))
+			for(Port vnfNetPort: vnfNet.getPorts())
+				if(NffgManager.areConnected(nffg, vnfNet.getId(), vnfNetPort.getId(), vnfSub.getId()))
+				{
+					subnetsIds.add(vnfSub.getId());
+					break;
+				}
+		return subnetsIds;
 	}
 
 }

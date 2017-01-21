@@ -17,7 +17,7 @@ public class ConfigDhcpServerServer {
     @JsonProperty("globalIpPool")
     private GlobalIpPool globalIpPool = new GlobalIpPool();
     @JsonProperty("clients")
-    private List<Object> clients = new ArrayList<>();
+    private List<Client> clients = new ArrayList<>();
 
     @JsonProperty("globalIpPool")
     public GlobalIpPool getGlobalIpPool() {
@@ -30,12 +30,12 @@ public class ConfigDhcpServerServer {
     }
 
     @JsonProperty("clients")
-    public List<Object> getClients() {
+    public List<Client> getClients() {
         return clients;
     }
 
     @JsonProperty("clients")
-    public void setClients(List<Object> clients) {
+    public void setClients(List<Client> clients) {
         this.clients = clients;
     }
 

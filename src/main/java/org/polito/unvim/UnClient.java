@@ -64,8 +64,9 @@ public class UnClient extends VimDriver {
 		if(nffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
 		// Create the server
-		Server server = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
+		String serverId = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
 		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		Server server = ComputeManager.getServerById(nffg, serverId, UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
 		return server;
 	}
 
@@ -98,7 +99,7 @@ public class UnClient extends VimDriver {
 	public List<Network> listNetworks(VimInstance vimInstance) throws VimDriverException {
 		log.debug("Listing networks for VimInstance with name: " + vimInstance.getName());
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
-		List<Network> networks = NetworkManager.getNetworks(nffg);
+		List<Network> networks = NetworkManager.getNetworks(nffg,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
 		return networks;
 	}
 
@@ -175,7 +176,6 @@ public class UnClient extends VimDriver {
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
 		if(nffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		// Create the server
 		ComputeManager.destroyServer(nffg, id);
 		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 	}
@@ -272,32 +272,53 @@ public class UnClient extends VimDriver {
 	@Override
 	public Subnet updateSubnet(VimInstance vimInstance, Network updatedNetwork, Subnet subnet)
 			throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		log.debug("Update required for subnet with id: " + subnet.getExtId());
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		String datastoreEndpoint = UniversalNodeProxy.getDatastoreEndpoint(vimInstance);
+		NetworkManager.configureSubnet(nffg,updatedNetwork,subnet,properties,datastoreEndpoint);
+		return subnet;
 	}
 
 	@Override
 	public List<String> getSubnetsExtIds(VimInstance vimInstance, String network_extId) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		log.debug("Required subnets ids for network with id: " + network_extId);
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		return NetworkManager.getSubnetsIds(nffg,network_extId);
 	}
 
 	@Override
 	public boolean deleteSubnet(VimInstance vimInstance, String existingSubnetExtId) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return false;
+		log.debug("Delete required for subnet with id: " + existingSubnetExtId);
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		NetworkManager.deleteSubnet(nffg, existingSubnetExtId);
+		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		return true;
 	}
 
 	@Override
 	public boolean deleteNetwork(VimInstance vimInstance, String extId) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return false;
+		log.debug("Delete required for network with id: " + extId);
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		NetworkManager.deleteNetwork(nffg, extId);
+		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		return true;
 	}
 
 	@Override
 	public Network getNetworkById(VimInstance vimInstance, String id) throws VimDriverException {
-		// TODO Auto-generated method stub
-		return null;
+		log.debug("Required network with id: " + id);
+		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+		if(nffg==null)
+			throw new VimDriverException("Illegal state. A nffg must be already deployed");
+		return NetworkManager.getNetwork(nffg,id,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
 	}
 
 	@Override
