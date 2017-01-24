@@ -184,6 +184,8 @@ public class NetworkManager {
 		// Send the yang
 		String dhcpMacControlPort = NffgManager.getMacControlPort(nffg,subnet.getExtId());
 		DatastoreProxy.sendDhcpYang(configurationService, dhcpYang, "openbaton", nffg.getId(), dhcpMacControlPort);
+
+		subnet.setGatewayIp(defaultGateway);
 	}
 
 	public static void deleteNetwork(Nffg nffg, String id) {

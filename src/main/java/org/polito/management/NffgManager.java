@@ -289,8 +289,8 @@ public class NffgManager {
 				{
 					flowRulesToDelete.add(flowRule);
 					String[] splittedMatch = match.getInput().split(":");
-					if(splittedMatch[0].equals("vnf"))
-						deleteVnfPort(nffg,splittedMatch[1],splittedMatch[2]+":"+splittedMatch[3]);
+					//if(splittedMatch[0].equals("vnf"))
+					//	deleteVnfPort(nffg,splittedMatch[1],splittedMatch[2]+":"+splittedMatch[3]);
 				}
 
 			}

@@ -43,7 +43,7 @@ public class UnClient extends VimDriver {
 		          args[0],
 		          args[1],
 		          Integer.parseInt(args[2]),
-		          1,
+		          5,
 		          args[4],
 		          args[5]);
 		    } else if (args.length == 4) {
@@ -52,20 +52,25 @@ public class UnClient extends VimDriver {
 		          args[0],
 		          args[1],
 		          Integer.parseInt(args[2]),
-		          1);
+		          5);
 		    } else
-		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 1);
+		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 5);
 		}
 
 	@Override
 	public Server launchInstance(VimInstance vimInstance, String name, String templateId, String flavor, String keypair,
 			Set<String> network, Set<String> secGroup, String userData) throws VimDriverException {
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
-		if(nffg==null)
-			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		// Create the server
-		String serverId = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
-		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		Nffg nffg;
+		String serverId;
+		synchronized(lock)
+		{
+			nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+			if(nffg==null)
+				throw new VimDriverException("Illegal state. A nffg must be already deployed");
+			// Create the server
+			serverId = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
+			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		}
 		Server server = ComputeManager.getServerById(nffg, serverId, UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
 		return server;
 	}
@@ -148,20 +153,17 @@ public class UnClient extends VimDriver {
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
 			String keyPair, Set<String> networks, Set<String> securityGroups, String userData, Map<String, String> floatingIps,
 			Set<Key> keys) throws VimDriverException {
-		synchronized(this)
-		{
-			log.debug("New server required:");
-			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData));
-			// Given an image name search the template:
-			String templateId=null;
-			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
-			for(VnfTemplate template: templates)
-				if(template.getId().equals(image))
-					templateId=template.getId();
-			if(templateId==null)
-				throw new VimDriverException("The required image is no longer present");
-			return launchInstance(vimInstance, hostname, templateId, extId, keyPair, networks, securityGroups, userData);
-		}
+		log.debug("New server required:");
+		log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData));
+		// Given an image name search the template:
+		String templateId=null;
+		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
+		for(VnfTemplate template: templates)
+			if(template.getId().equals(image))
+				templateId=template.getId();
+		if(templateId==null)
+			throw new VimDriverException("The required image is no longer present");
+		return launchInstance(vimInstance, hostname, templateId, extId, keyPair, networks, securityGroups, userData);
 	}
 
 	@Override
@@ -172,12 +174,15 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public void deleteServerByIdAndWait(VimInstance vimInstance, String id) throws VimDriverException {
-		log.debug("Delete required for server with id: " + id);
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
-		if(nffg==null)
-			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		ComputeManager.destroyServer(nffg, id);
-		UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		synchronized(lock)
+		{
+			log.debug("Delete required for server with id: " + id);
+			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, "openbaton");
+			if(nffg==null)
+				throw new VimDriverException("Illegal state. A nffg must be already deployed");
+			ComputeManager.destroyServer(nffg, id);
+			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		}
 	}
 
 	@Override
