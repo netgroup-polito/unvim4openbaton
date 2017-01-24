@@ -169,6 +169,8 @@ public class DatastoreProxy {
 	        connection.setRequestMethod("GET");
 	        connection.setRequestProperty("Accept", "application/json");
 	        int responseCode = connection.getResponseCode();
+	        if(responseCode==404)
+	        	return null;
 			//TODO: Deal with responseCode different from 200
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));

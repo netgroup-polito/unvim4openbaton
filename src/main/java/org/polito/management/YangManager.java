@@ -70,14 +70,10 @@ public class YangManager {
 		yang.getConfigNatInterfaces().getIfEntry().add(iface);
 	}
 
-	public static Map<String, List<String>> readClientAddresses(DhcpYang dhcpYang) {
-		Map<String, List<String>> map = new HashMap<String, List<String>>();
+	public static Map<String, String> readClientAddresses(DhcpYang dhcpYang) {
+		Map<String, String> map = new HashMap<String, String>();
 		for(Client client: dhcpYang.getConfigDhcpServerServer().getClients())
-		{
-			List<String> ip = new ArrayList<>();
-			ip.add(client.getIpAddress());
-			map.put(client.getMacAddress(), ip);
-		}
+			map.put(client.getMacAddress(), client.getIpAddress());
 		return map;
 	}
 }

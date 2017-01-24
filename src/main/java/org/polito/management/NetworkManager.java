@@ -1,8 +1,10 @@
 package org.polito.management;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -19,6 +21,9 @@ import org.polito.model.nffg.AbstractEP.Type;
 import org.polito.model.yang.dhcp.DhcpYang;
 import org.polito.model.yang.nat.NatYang;
 import org.polito.proxy.DatastoreProxy;
+import org.polito.unvim.UnClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class NetworkManager {
@@ -30,6 +35,7 @@ public class NetworkManager {
 	private static final String MANAGEMENT_NETWORK = "manag_network";
 	private static final String MANAGEMENT_SUBNET = "manag_subnet";
 	private static final String MANAGEMENT_ROUTER = "manag_extNet";
+	private static Logger log = LoggerFactory.getLogger(UnClient.class);
 
 
 	public static void createNetwork(Nffg nffg, Network network) {
@@ -201,4 +207,104 @@ public class NetworkManager {
 		return subnetsIds;
 	}
 
+	public static List<Vnf> getBelongingNetworks(Nffg nffg, String serverId) {
+		List<Vnf> belongingNetworks = new ArrayList<>();
+		for(Vnf vnfNet: NffgManager.getVnfsByDescription(nffg, NETWORK))
+			for(Port vnfNetPort: vnfNet.getPorts())
+				if(NffgManager.areConnected(nffg, vnfNet.getId(), vnfNetPort.getId(), serverId))
+				{
+					belongingNetworks.add(vnfNet);
+					break;
+				}
+		return belongingNetworks;
+	}
+
+	public static Vnf getBelongingSubnet(Nffg nffg, String netowrkId) {
+		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, SUBNET))
+			for(Port vnfSubPort: vnfSub.getPorts())
+				if(NffgManager.areConnected(nffg, vnfSub.getId(), vnfSubPort.getId(), netowrkId))
+				return vnfSub;
+		return null;
+	}
+
+	public static Map<String, List<String>> getNetworkIpAddressAssociation(Nffg nffg, Vnf vnfServer, String configurationService) throws VimDriverException {
+		List<Vnf> vnfNetworks = getBelongingNetworks(nffg,vnfServer.getId());
+		Map<String,List<String>> networkMacAddressAssociation = getNetworkAndMacAddressAssociation(nffg,vnfServer,vnfNetworks);
+		Map<String,List<String>> networkIpAddressAssociation = new HashMap<>();
+
+		boolean gotAllAddresses = false;
+		while(!gotAllAddresses)
+		{
+			gotAllAddresses=true;
+			for(Vnf vnfNet: vnfNetworks)
+			{
+				String netName = vnfNet.getName().replaceAll(NETWORK_PREFIX, "");
+				if(networkIpAddressAssociation.get(netName) == null || (networkIpAddressAssociation.get(netName).size()
+						!= networkMacAddressAssociation.get(netName).size()))
+				{
+					Vnf vnfSubnet = NetworkManager.getBelongingSubnet(nffg,vnfNet.getId());
+					DhcpYang dhcpYang = DatastoreProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
+					if(dhcpYang==null)
+					{
+						log.debug("The Dhcp with id " + vnfSubnet.getId() + " is not registered to the configuration service yet. Sleeping 3 seconds..");
+						try {
+							Thread.sleep(3000);
+						} catch (InterruptedException e) {
+							log.debug("Sleeping 3 seconds.. failed!");
+						}
+						gotAllAddresses=false;
+						continue;
+					}
+					Map<String, String> macIpAssociation = YangManager.readClientAddresses(dhcpYang);
+					List<String> macAddressesToMatch = networkMacAddressAssociation.get(netName);
+					for(String mac: macAddressesToMatch)
+					{
+						String ipAddress = macIpAssociation.get(mac);
+						if(ipAddress==null)
+						{
+							log.debug("The Dhcp with id " + vnfSubnet.getId() + " has not assigned an Ip address to the interface with mac address: '"+ mac + "' yet. Sleeping 3 seconds..");
+							try {
+								Thread.sleep(3000);
+							} catch (InterruptedException e) {
+								log.debug("Sleeping 3 seconds.. failed!");
+							}
+							gotAllAddresses=false;
+							break;
+						}
+						List<String> ipAddressesInNet = networkIpAddressAssociation.get(netName);
+						if(ipAddressesInNet==null)
+						{
+							ipAddressesInNet = new ArrayList<>();
+							networkIpAddressAssociation.put(netName,ipAddressesInNet);
+						}
+						ipAddressesInNet.add(ipAddress);
+					}
+				}
+					
+			}
+		}
+		return networkIpAddressAssociation;
+	}
+
+	static Map<String,List<String>> getNetworkAndMacAddressAssociation(Nffg nffg, Vnf vnfServer, List<Vnf> vnfNetworks)
+	{
+		Map<String,List<String>> networkMacAddressAssociation = new HashMap<>();  // netName - listOfMacAddresses
+		for(Vnf vnfNet: vnfNetworks)
+		{
+			for(Port port: vnfServer.getPorts())
+			{
+				if(NffgManager.areConnected(nffg, vnfServer.getId(), port.getId(), vnfNet.getId()))
+				{
+					List<String> macAddresses = networkMacAddressAssociation.get(vnfNet.getName().replaceAll(NETWORK_PREFIX, ""));
+					if(macAddresses==null)
+					{
+						macAddresses = new ArrayList<>();
+						networkMacAddressAssociation.put(vnfNet.getName().replaceAll(NETWORK_PREFIX, ""), macAddresses);
+					}
+					macAddresses.add(port.getMacAddress());
+				}
+			}
+		}
+		return networkMacAddressAssociation;
+	}
 }

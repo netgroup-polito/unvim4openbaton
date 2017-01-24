@@ -9,13 +9,14 @@ import java.util.Set;
 import org.openbaton.catalogue.nfvo.Server;
 import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.nffg.Nffg;
-import org.polito.model.nffg.Port;
 import org.polito.model.nffg.Vnf;
-import org.polito.model.yang.dhcp.DhcpYang;
-import org.polito.proxy.DatastoreProxy;
+import org.polito.unvim.UnClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ComputeManager {
 	private static String SERVER_INSTANCE = "Server";
+	private static Logger log = LoggerFactory.getLogger(UnClient.class);
 
 	public static String createServer(Nffg nffg, String hostname, String templateImageId, String keyPair,
 			Set<String> networks, Set<String> securityGroups, String userData){
@@ -24,43 +25,21 @@ public class ComputeManager {
 		if(userData!=null)
 			NffgManager.setUserDataToVnf(nffg,vnfId,userData);
 		for(String networkId: networks)
-			NffgManager.connectVnfToVnf(nffg, networkId, vnfId, false);
+			NffgManager.connectVnfToVnf(nffg, vnfId, networkId, true);
 		return vnfId;
 	}
 
 	public static Server getServerById(Nffg nffg, String serverId, String configurationService) throws VimDriverException {
-		Vnf vnf = NffgManager.getVnfById(nffg, serverId);
+		log.debug("Obtaining ip addresses of the server with id: " + serverId);
+		Vnf vnfServer = NffgManager.getVnfById(nffg, serverId);
 		Server server = new Server();
 		server.setStatus("running");
 		server.setExtendedStatus("running");
 		server.setExtId(serverId);
-		server.setHostName(vnf.getName());
+		server.setHostName(vnfServer.getName());
 		server.setFloatingIps(new HashMap<String, String>());
-		boolean gotAllAddresses = false;
-		Map<String, List<String>> ipsServer = null;
-		while(!gotAllAddresses)
-		{
-			gotAllAddresses=true;
-			DhcpYang dhcpYang = DatastoreProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, serverId));
-			Map<String, List<String>> ipsAll = YangManager.readClientAddresses(dhcpYang);
-			ipsServer = new HashMap<String, List<String>>();
-			for(Port port: vnf.getPorts())
-			{
-				List<String> list = ipsAll.get(port.getMacAddress());
-				if(list==null)
-				{
-					gotAllAddresses=false;
-					try {
-						Thread.sleep(3000);
-					} catch (InterruptedException e) {
-						throw new VimDriverException(e.getMessage());
-					}
-					break;
-				}
-				ipsServer.put(port.getMacAddress(), list);
-			}
-		}
-		server.setIps(ipsServer);
+		Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
+		server.setIps(networkIpAddressAssociation);
 		return server;
 	}
 
