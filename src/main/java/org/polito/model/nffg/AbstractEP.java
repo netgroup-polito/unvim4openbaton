@@ -6,7 +6,8 @@ public class AbstractEP {
 	public enum Type{
 		UNDEFINED,
 		INTERFACE,
-		HOSTSTACK
+		HOSTSTACK,
+		INTERNAL
 	}
 	@JsonIgnore
 	protected Type type= Type.UNDEFINED;

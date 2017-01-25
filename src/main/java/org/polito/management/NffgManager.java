@@ -15,6 +15,7 @@ import org.polito.model.nffg.FlowRule;
 import org.polito.model.nffg.HoststackEndPoint;
 import org.polito.model.nffg.IdAware;
 import org.polito.model.nffg.InterfaceEndPoint;
+import org.polito.model.nffg.InternalEndPoint;
 import org.polito.model.nffg.Match;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Port;
@@ -79,6 +80,11 @@ public class NffgManager {
 			if(hep.getConfiguration().equals("static"))
 				hep.setIp(endpointArgs[1]);
 			wrappedEP.setEndpoint(hep);
+			break;
+		case INTERNAL:
+			InternalEndPoint mep = new InternalEndPoint();
+			mep.setInternalGroup(endpointArgs[0]);
+			wrappedEP.setEndpoint(mep);
 			break;
 		default:
 			break;
@@ -184,8 +190,9 @@ public class NffgManager {
 	    return sb.toString();
 	}
 
-	public static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId) {
-		String portVnfId = createPort(nffg, vnfId, false);
+	public static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId, boolean trusted)
+	{
+		String portVnfId = createPort(nffg, vnfId, trusted);
 		Match match = new Match();
 		match.setInput("vnf:" + vnfId + ":" + portVnfId);
 		Action action = new Action();
@@ -204,6 +211,10 @@ public class NffgManager {
 		flowRule.addAction(action);
 		flowRule.setId(getNewId(nffg.getFlowRules()));
 		nffg.addFlowRule(flowRule);
+	}
+
+	public static void connectEndpointToVnf(Nffg nffg, String endpointId, String vnfId) {
+		connectEndpointToVnf(nffg, endpointId, vnfId, false);
 	}
 
 	public static List<Vnf> getVnfsByDescription(Nffg nffg, String description) {
@@ -253,6 +264,15 @@ public class NffgManager {
 		return endpoints;
 	}
 
+	public static EndpointWrapper getEndpointById(Nffg nffg, String endpointId) {
+		if(nffg!=null)
+			for(EndpointWrapper endpoint: nffg.getEndpoints())
+				if(endpoint.getId().equals(endpointId))
+					return endpoint;
+		return null;
+	}
+
+	// Connection between VNFs inside the same graph
 	public static boolean areConnected(Nffg nffg, String vnfId, String portId, String otherId) {
 		String matchToSerach = "vnf:"+ vnfId + ":" + portId;
 		boolean found=false;
@@ -269,6 +289,52 @@ public class NffgManager {
 				break;
 		}
 		return found;
+	}
+
+	// Connection between VNFs belonging to different graphs
+	public static boolean areConnected(Nffg nffg, String vnfId, String portId, Nffg otherNffg, String otherVnfId) {
+		String matchToSearch = "vnf:"+ vnfId + ":" + portId;
+		EndpointWrapper nffgInternal = null;
+		for(FlowRule flowRule: nffg.getFlowRules())
+		{
+			if(flowRule.getMatch().getInput().equals(matchToSearch))
+			{
+				for(Action action: flowRule.getActions())
+				{
+					String[] splittedAction = action.getOutput().split(":");
+					if (splittedAction[0].equals("endpoint"))
+					{
+						EndpointWrapper epw = NffgManager.getEndpointById(nffg, splittedAction[1]);
+						if(epw.getEndpoint().getClass() == InternalEndPoint.class)
+						{
+							nffgInternal =  epw;
+							break;
+						}
+					}
+				}
+				break;
+			}
+		}
+		if(nffgInternal!=null)
+		{
+			EndpointWrapper otherNffgInternal = null;
+			List<EndpointWrapper> endpointsWrap = otherNffg.getEndpoints();
+			for(EndpointWrapper endpointWrap: endpointsWrap)
+				if(endpointWrap.getEndpoint().getClass() == InternalEndPoint.class )
+					if(((InternalEndPoint)endpointWrap.getEndpoint()).getInternalGroup().equals(((InternalEndPoint)nffgInternal.getEndpoint()).getInternalGroup()))
+					{
+						otherNffgInternal=endpointWrap;
+						break;
+					}
+			if(otherNffgInternal!=null)
+			{
+				Vnf otherVnf = NffgManager.getVnfById(otherNffg, otherVnfId);
+				for(Port otherVnfPort: otherVnf.getPorts())
+					if(areConnected(otherNffg, otherVnfId, otherVnfPort.getId(), otherNffgInternal.getId()))
+						return true;
+			}
+		}
+		return false;
 	}
 
 	public static void destroyVnf(Nffg nffg, String id) {
@@ -300,6 +366,32 @@ public class NffgManager {
 		nffg.getVnfs().remove(getVnfById(nffg, id));
 	}
 
+	public static void destroyEndpoint(Nffg nffg, String id) {
+		// Firstly destroy links:
+		List<FlowRule> flowRulesToDelete = new ArrayList<>();
+		String ruleEndpointToDelete = "endpoint:"+ id ;
+		for(FlowRule flowRule: nffg.getFlowRules())
+		{
+			Match match = flowRule.getMatch();
+			if(match.getInput().equals(ruleEndpointToDelete))
+			{
+				flowRulesToDelete.add(flowRule);
+				continue;
+			}
+			for(Action action: flowRule.getActions())
+			{
+				if(action.getOutput().equals(ruleEndpointToDelete))
+				{
+					flowRulesToDelete.add(flowRule);
+				}
+
+			}
+		}
+		nffg.getFlowRules().removeAll(flowRulesToDelete);
+		// Then destroy the VNF
+		nffg.getEndpoints().remove(getEndpointById(nffg, id));
+	}
+
 	private static void deleteVnfPort(Nffg nffg, String vnfId, String portId) {
 		Vnf vnf = getVnfById(nffg, vnfId);
 		Port portToDelete = null;
@@ -310,6 +402,43 @@ public class NffgManager {
 				break;
 			}
 		vnf.getPorts().remove(portToDelete);
+	}
+
+	public static void connectGraphToGraph(Nffg nffg, String vnfId, Nffg otherNffg,	String otherVnfId) {
+		connectGraphToGraph(nffg, vnfId, otherNffg, otherVnfId, false);
+	}
+
+	public static void connectGraphToGraph(Nffg nffg, String vnfId, Nffg otherNffg,	String otherVnfId, boolean trusted) {
+		String nffgInternalId = NffgManager.getNewId(nffg.getEndpoints());
+		String otherNffgInternalId = NffgManager.getNewId(otherNffg.getEndpoints());
+		String internalGroup = nffg.getId() + "_" + otherNffg.getId() + "_" + nffgInternalId + "_" + otherNffgInternalId;
+		createEndpoint(nffg,nffgInternalId,"merge_point",Type.INTERNAL, internalGroup);
+		connectEndpointToVnf(nffg, nffgInternalId, vnfId, true);
+		createEndpoint(otherNffg,otherNffgInternalId,"merge_point",Type.INTERNAL, internalGroup);
+		connectEndpointToVnf(otherNffg, otherNffgInternalId, otherVnfId);
+	}
+
+	public static void disconnectGraphs(Nffg nffg, String vnfId, Nffg otherNffg) {
+		EndpointWrapper internalNffg = null;
+		List<EndpointWrapper> endpointsWrap = nffg.getEndpoints();
+		for(EndpointWrapper endpointWrap: endpointsWrap)
+			if(endpointWrap.getEndpoint().getClass() == InternalEndPoint.class )
+			{
+				internalNffg=endpointWrap;
+				break;
+			}
+		
+		EndpointWrapper internalOtherNffg = null;
+		List<EndpointWrapper> otherEndpointsWrap = otherNffg.getEndpoints();
+		for(EndpointWrapper otherEndpointWrap: otherEndpointsWrap)
+			if(otherEndpointWrap.getEndpoint().getClass() == InternalEndPoint.class )
+				if(((InternalEndPoint)otherEndpointWrap.getEndpoint()).getInternalGroup().equals(((InternalEndPoint)internalNffg.getEndpoint()).getInternalGroup()))
+				{
+					internalOtherNffg=otherEndpointWrap;
+					break;
+				}
+		destroyEndpoint(nffg,internalNffg.getId());
+		destroyEndpoint(otherNffg,internalOtherNffg.getId());
 	}
 
 }

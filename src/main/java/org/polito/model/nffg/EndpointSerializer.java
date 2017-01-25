@@ -37,6 +37,11 @@ public class EndpointSerializer extends StdSerializer<EndpointWrapper>{
 		case HOSTSTACK:
 			gen.writeStringField("type", "host-stack");
 			gen.writeObjectField("host-stack", (HoststackEndPoint)value.getEndpoint());
+			break;
+		case INTERNAL:
+			gen.writeStringField("type", "internal");
+			gen.writeObjectField("internal", (InternalEndPoint)value.getEndpoint());
+			break;
 		default:
 			break;
 		}

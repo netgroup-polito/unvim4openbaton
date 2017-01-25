@@ -35,8 +35,8 @@ public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
         switch (type) {
 		case "interface":
 			InterfaceEndPoint iep = new InterfaceEndPoint();
-			JsonNode internalNode = node.get("interface");
-			iep.setIfName(internalNode.get("if-name").asText());
+			JsonNode internalIfNode = node.get("interface");
+			iep.setIfName(internalIfNode.get("if-name").asText());
 			ep.setEndpoint(iep);
 			break;
 		case "host-stack":
@@ -46,6 +46,12 @@ public class EndpointDeserializer extends StdDeserializer<EndpointWrapper>{
 			if(hep.getConfiguration().equals("static"))
 				hep.setIp(internalHsNode.get("ipv4").asText());
 			ep.setEndpoint(hep);
+			break;
+		case "internal":
+			InternalEndPoint mep = new InternalEndPoint();
+			JsonNode internalIntNode = node.get("internal");
+			mep.setInternalGroup(internalIntNode.get("internal-group").asText());
+			ep.setEndpoint(mep);
 			break;
 		default:
 			break;

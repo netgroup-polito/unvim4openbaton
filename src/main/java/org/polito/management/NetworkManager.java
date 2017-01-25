@@ -38,28 +38,28 @@ public class NetworkManager {
 	private static Logger log = LoggerFactory.getLogger(UnClient.class);
 
 
-	public static void createNetwork(Nffg nffg, Network network) {
-		String vnfId = NffgManager.getNewId(nffg.getVnfs());
-		NffgManager.createVnf(nffg,vnfId,NETWORK_PREFIX + network.getName(),NETWORK,"switch",null);
-		network.setExtId(vnfId);
-		// attach the new switch to the router
-		String managemtnRouterId = NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId();
-		NffgManager.connectVnfToVnf(nffg,vnfId,managemtnRouterId,false);
+	public static void createNetwork(Nffg managementNffg, Nffg tenantNffg, Network network) {
+		String vnfNetId = NffgManager.getNewId(tenantNffg.getVnfs());
+		NffgManager.createVnf(tenantNffg,vnfNetId,NETWORK_PREFIX + network.getName(),NETWORK,"switch",null);
+		network.setExtId(vnfNetId);
+		// attach the new switch (in the tenant graph) to the router (in the management graph)
+		String managemtnRouterId = NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId();
+		NffgManager.connectGraphToGraph(tenantNffg,vnfNetId,managementNffg,managemtnRouterId);
 	}
 
-	public static void createSubnet(Nffg nffg, Network network, Subnet subnet, String datastoreEndpoint) throws VimDriverException
+	public static void createSubnet(Nffg managementNffg, Nffg tenantNffg, Network network, Subnet subnet, String datastoreEndpoint) throws VimDriverException
 	{
-		String vnfId = NffgManager.getNewId(nffg.getVnfs());
-		NffgManager.createVnf(nffg,vnfId,SUBNET_PREFIX + subnet.getName(),SUBNET,null,"configurableDhcp");
+		String vnfSubId = NffgManager.getNewId(tenantNffg.getVnfs());
+		NffgManager.createVnf(tenantNffg,vnfSubId,SUBNET_PREFIX + subnet.getName(),SUBNET,null,"configurableDhcp");
 		if(datastoreEndpoint!=null)
 		{
 			VnfTemplate vnfTemplate = DatastoreProxy.getTemplate(datastoreEndpoint, "configurableDhcp");
-			NffgManager.setTemplateToVnf(nffg,vnfId,vnfTemplate);
+			NffgManager.setTemplateToVnf(tenantNffg,vnfSubId,vnfTemplate);
 		}
-		subnet.setExtId(vnfId);
-		String managementNetId = NffgManager.getVnfsByDescription(nffg,MANAGEMENT_NETWORK).get(0).getId();
-		NffgManager.connectVnfToVnf(nffg,vnfId,managementNetId,true);
-		NffgManager.connectVnfToVnf(nffg,vnfId,network.getExtId(),false);
+		subnet.setExtId(vnfSubId);
+		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_NETWORK).get(0).getId();
+		NffgManager.connectGraphToGraph(tenantNffg,vnfSubId,managementNffg,managementNetId,true); // trusted port!!
+		NffgManager.connectVnfToVnf(tenantNffg,vnfSubId,network.getExtId(),false);
 	}
 
 	public static List<Network> getNetworks(Nffg nffg, String configurationService) throws VimDriverException {
@@ -139,7 +139,7 @@ public class NetworkManager {
 	    .toString();
 	}
 
-	public static void configureSubnet(Nffg nffg, Network createdNetwork, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
+	public static void configureSubnet(Nffg managementNffg, Nffg tenantNffg, Network createdNetwork, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
 		// Calculate network parameters
 		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
 		String netmask = subnetInfo.getNetmask();
@@ -154,18 +154,18 @@ public class NetworkManager {
 
 		// Create Nat Yang
 		NatYang natYang = new NatYang();
-		Vnf router = NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0);
+		Vnf router = NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0);
 		for(Port port: router.getPorts())
 			if(port.isTrusted())
 				YangManager.addInterface(natYang, port.getName(), "10.0.0.1", "dhcp", "config", "");
-			else if(NffgManager.areConnected(nffg, router.getId(), port.getId(), createdNetwork.getExtId()))
+			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), tenantNffg, createdNetwork.getExtId()))
 				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", "");
-			else if(NffgManager.areConnected(nffg, router.getId(), port.getId(), NffgManager.getEndpointByName(nffg,"managementInterface").get(0).getId()))
+			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), NffgManager.getEndpointByName(managementNffg,"managementInterface").get(0).getId()))
 				YangManager.addInterface(natYang, port.getName(), "10.0.0.1", "dhcp", "wan", "");
 
 		// Send the yang
-		String routerMacControlPort = NffgManager.getMacControlPort(nffg,NffgManager.getVnfsByDescription(nffg, MANAGEMENT_ROUTER).get(0).getId());
-		DatastoreProxy.sendNatYang(configurationService, natYang, "openbaton", nffg.getId(), routerMacControlPort);
+		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
+		DatastoreProxy.sendNatYang(configurationService, natYang, tenantNffg.getId(), managementNffg.getId(), routerMacControlPort);
 
 		// Create Dhcp Yang
 		DhcpYang dhcpYang = new DhcpYang();
@@ -174,7 +174,7 @@ public class NetworkManager {
 				,properties.getProperty("dhcp.maxLeaseTime"),properties.getProperty("dhcp.domainNameServer")
 				,properties.getProperty("dhcp.domainName"));
 		YangManager.setServerDefaultGateway(dhcpYang,defaultGateway,netmask);
-		Vnf dhcp = NffgManager.getVnfById(nffg, subnet.getExtId());
+		Vnf dhcp = NffgManager.getVnfById(tenantNffg, subnet.getExtId());
 		for(Port port: dhcp.getPorts())
 			if(port.isTrusted())
 				YangManager.addInterface(dhcpYang, port.getName(), "10.0.0.1", "dhcp", "config", "");
@@ -182,18 +182,20 @@ public class NetworkManager {
 				YangManager.addInterface(dhcpYang, port.getName(), dhcpUserPortIp, "static", "dhcp", defaultGateway);
 
 		// Send the yang
-		String dhcpMacControlPort = NffgManager.getMacControlPort(nffg,subnet.getExtId());
-		DatastoreProxy.sendDhcpYang(configurationService, dhcpYang, "openbaton", nffg.getId(), dhcpMacControlPort);
+		String dhcpMacControlPort = NffgManager.getMacControlPort(tenantNffg,subnet.getExtId());
+		DatastoreProxy.sendDhcpYang(configurationService, dhcpYang, tenantNffg.getId(), tenantNffg.getId(), dhcpMacControlPort);
 
 		subnet.setGatewayIp(defaultGateway);
 	}
 
-	public static void deleteNetwork(Nffg nffg, String id) {
-		NffgManager.destroyVnf(nffg,id);
+	public static void deleteNetwork(Nffg tenantNffg, Nffg managementNffg, String id) {
+		NffgManager.disconnectGraphs(tenantNffg,id,managementNffg);
+		NffgManager.destroyVnf(tenantNffg,id);
 	}
 
-	public static void deleteSubnet(Nffg nffg, String id) {
-		NffgManager.destroyVnf(nffg,id);
+	public static void deleteSubnet(Nffg tenantNffg, Nffg managementNffg, String id) {
+		NffgManager.disconnectGraphs(tenantNffg,id,managementNffg);
+		NffgManager.destroyVnf(tenantNffg,id);
 	}
 
 	public static List<String> getSubnetsIds(Nffg nffg, String networkId) {
