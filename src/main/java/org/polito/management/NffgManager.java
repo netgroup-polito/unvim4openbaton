@@ -413,7 +413,7 @@ public class NffgManager {
 		String otherNffgInternalId = NffgManager.getNewId(otherNffg.getEndpoints());
 		String internalGroup = nffg.getId() + "_" + otherNffg.getId() + "_" + nffgInternalId + "_" + otherNffgInternalId;
 		createEndpoint(nffg,nffgInternalId,"merge_point",Type.INTERNAL, internalGroup);
-		connectEndpointToVnf(nffg, nffgInternalId, vnfId, true);
+		connectEndpointToVnf(nffg, nffgInternalId, vnfId, trusted);
 		createEndpoint(otherNffg,otherNffgInternalId,"merge_point",Type.INTERNAL, internalGroup);
 		connectEndpointToVnf(otherNffg, otherNffgInternalId, otherVnfId);
 	}
