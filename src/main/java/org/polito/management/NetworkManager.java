@@ -20,6 +20,7 @@ import org.polito.model.template.VnfTemplate;
 import org.polito.model.nffg.AbstractEP.Type;
 import org.polito.model.yang.dhcp.DhcpYang;
 import org.polito.model.yang.nat.NatYang;
+import org.polito.proxy.ConfigurationServiceProxy;
 import org.polito.proxy.DatastoreProxy;
 import org.polito.unvim.UnClient;
 import org.slf4j.Logger;
@@ -88,7 +89,7 @@ public class NetworkManager {
 	}
 
 	private static Subnet getSubnet(Nffg nffg, Vnf vnfSubnet, String configurationService) throws VimDriverException {
-		DhcpYang dhcpYang = DatastoreProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
+		DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
 		String gatewayIp = YangManager.getServerDefaultGatewayIp(dhcpYang);
 		String gatewayMask = YangManager.getServerDefaultGatewayMask(dhcpYang);
 		SubnetInfo subnetInfo = new SubnetUtils(gatewayIp,gatewayMask).getInfo();
@@ -165,7 +166,7 @@ public class NetworkManager {
 
 		// Send the yang
 		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
-		DatastoreProxy.sendNatYang(configurationService, natYang, tenantNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, tenantNffg.getId(), managementNffg.getId(), routerMacControlPort);
 
 		// Create Dhcp Yang
 		DhcpYang dhcpYang = new DhcpYang();
@@ -183,7 +184,7 @@ public class NetworkManager {
 
 		// Send the yang
 		String dhcpMacControlPort = NffgManager.getMacControlPort(tenantNffg,subnet.getExtId());
-		DatastoreProxy.sendDhcpYang(configurationService, dhcpYang, tenantNffg.getId(), tenantNffg.getId(), dhcpMacControlPort);
+		ConfigurationServiceProxy.sendDhcpYang(configurationService, dhcpYang, tenantNffg.getId(), tenantNffg.getId(), dhcpMacControlPort);
 
 		subnet.setGatewayIp(defaultGateway);
 	}
@@ -247,7 +248,7 @@ public class NetworkManager {
 						!= networkMacAddressAssociation.get(netName).size()))
 				{
 					Vnf vnfSubnet = NetworkManager.getBelongingSubnet(nffg,vnfNet.getId());
-					DhcpYang dhcpYang = DatastoreProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
+					DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
 					if(dhcpYang==null)
 					{
 						log.debug("The Dhcp with id " + vnfSubnet.getId() + " is not registered to the configuration service yet. Sleeping 3 seconds..");

@@ -72,7 +72,7 @@ public class UnClient extends VimDriver {
 			serverId = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
 			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
-		Server server = ComputeManager.getServerById(nffg, serverId, UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
+		Server server = ComputeManager.getServerById(nffg, serverId, UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance));
 		return server;
 	}
 
@@ -272,7 +272,7 @@ public class UnClient extends VimDriver {
 		NetworkManager.createSubnet(managementNffg, tenantNffg, createdNetwork, subnet, datastoreEndpoint);
 		UniversalNodeProxy.sendNFFG(vimInstance, managementNffg);
 		UniversalNodeProxy.sendNFFG(vimInstance, tenantNffg);
-		NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
+		NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance));
 		return subnet;
 	}
 
@@ -290,8 +290,8 @@ public class UnClient extends VimDriver {
 		Nffg tenantNffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
 		if(managementNffg==null || tenantNffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		String datastoreEndpoint = UniversalNodeProxy.getDatastoreEndpoint(vimInstance);
-		NetworkManager.configureSubnet(managementNffg,tenantNffg,updatedNetwork,subnet,properties,datastoreEndpoint);
+		String configurationServiceEndpoint = UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance);
+		NetworkManager.configureSubnet(managementNffg,tenantNffg,updatedNetwork,subnet,properties,configurationServiceEndpoint);
 		return subnet;
 	}
 
@@ -336,7 +336,7 @@ public class UnClient extends VimDriver {
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
 		if(nffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		return NetworkManager.getNetwork(nffg,id,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
+		return NetworkManager.getNetwork(nffg,id,UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance));
 	}
 
 	@Override

@@ -37,6 +37,12 @@ public class UniversalNodeProxy {
 		return unConf.getDatastoreEndpoint();
 	}
 
+	public static String getConfigurationServiceEndpoint(VimInstance unInstance) throws VimDriverException
+	{
+		UnConfiguration unConf = getUnConfiguration(unInstance);
+		return unConf.getConfigurationServiceEndpoint();
+	}
+
 	public static List<String> getUnPhisicalPorts(VimInstance unInstance) throws VimDriverException
 	{
 		UnConfiguration unConf = getUnConfiguration(unInstance);
