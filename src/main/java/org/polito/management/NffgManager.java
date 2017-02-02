@@ -163,7 +163,7 @@ public class NffgManager {
 			// launch exception
 		}
 
-		String newPortId = "port:"+portNumb;
+		String newPortId = "L2port:"+portNumb;
 		Port newPort = new Port();
 		newPort.setId(newPortId);
 		newPort.setName(newPortName);

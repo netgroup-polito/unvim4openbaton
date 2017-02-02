@@ -158,11 +158,11 @@ public class NetworkManager {
 		Vnf router = NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0);
 		for(Port port: router.getPorts())
 			if(port.isTrusted())
-				YangManager.addInterface(natYang, port.getName(), "10.0.0.1", "dhcp", "config", "");
+				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "config", null);
 			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), tenantNffg, createdNetwork.getExtId()))
-				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", "");
+				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", null);
 			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), NffgManager.getEndpointByName(managementNffg,"managementInterface").get(0).getId()))
-				YangManager.addInterface(natYang, port.getName(), "10.0.0.1", "dhcp", "wan", "");
+				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "wan", null);
 
 		// Send the yang
 		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
@@ -178,7 +178,7 @@ public class NetworkManager {
 		Vnf dhcp = NffgManager.getVnfById(tenantNffg, subnet.getExtId());
 		for(Port port: dhcp.getPorts())
 			if(port.isTrusted())
-				YangManager.addInterface(dhcpYang, port.getName(), "10.0.0.1", "dhcp", "config", "");
+				YangManager.addInterface(dhcpYang, port.getName(), null, "dhcp", "config", null);
 			else
 				YangManager.addInterface(dhcpYang, port.getName(), dhcpUserPortIp, "static", "dhcp", defaultGateway);
 
@@ -236,7 +236,8 @@ public class NetworkManager {
 		List<Vnf> vnfNetworks = getBelongingNetworks(nffg,vnfServer.getId());
 		Map<String,List<String>> networkMacAddressAssociation = getNetworkAndMacAddressAssociation(nffg,vnfServer,vnfNetworks);
 		Map<String,List<String>> networkIpAddressAssociation = new HashMap<>();
-
+		int secondsDhcpGet=0;
+		int secondsIpAddress=0;
 		boolean gotAllAddresses = false;
 		while(!gotAllAddresses)
 		{
@@ -248,10 +249,13 @@ public class NetworkManager {
 						!= networkMacAddressAssociation.get(netName).size()))
 				{
 					Vnf vnfSubnet = NetworkManager.getBelongingSubnet(nffg,vnfNet.getId());
-					DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
+					DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, nffg.getId(), nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
 					if(dhcpYang==null)
 					{
-						log.debug("The Dhcp with id " + vnfSubnet.getId() + " is not registered to the configuration service yet. Sleeping 3 seconds..");
+						if(secondsDhcpGet>29)
+							throw new VimDriverException("The Dhcp with id " + vnfSubnet.getId() + " has not be able to register itself to the configuration service in 30 seconds!");
+						secondsDhcpGet+=3;
+						log.debug("The Dhcp with id " + vnfSubnet.getId() + " is not registered to the configuration service yet. Sleeping 3 seconds... ["+secondsDhcpGet+"]");
 						try {
 							Thread.sleep(3000);
 						} catch (InterruptedException e) {
@@ -267,7 +271,10 @@ public class NetworkManager {
 						String ipAddress = macIpAssociation.get(mac);
 						if(ipAddress==null)
 						{
-							log.debug("The Dhcp with id " + vnfSubnet.getId() + " has not assigned an Ip address to the interface with mac address: '"+ mac + "' yet. Sleeping 3 seconds..");
+							if(secondsIpAddress>29)
+								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 30 seconds!");
+							secondsIpAddress+=3;
+							log.debug("The Dhcp with id " + vnfSubnet.getId() + " has not assigned an Ip address to the interface with mac address: '"+ mac + "' yet. Sleeping 3 seconds... ["+secondsIpAddress+"]");
 							try {
 								Thread.sleep(3000);
 							} catch (InterruptedException e) {
