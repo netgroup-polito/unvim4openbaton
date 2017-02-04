@@ -15,7 +15,6 @@ import org.polito.model.message.UnConfiguration;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.NffgWrapper;
 import org.polito.model.template.VnfTemplate;
-import org.polito.model.yang.dhcp.DhcpYang;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,29 +26,11 @@ public class UniversalNodeProxy {
 
 	public static List<VnfTemplate> getTemplates(VimInstance unInstance) throws VimDriverException
 	{
-		String datastoreEndpoint = getDatastoreEndpoint(unInstance);
+		String datastoreEndpoint = getConfiguration(unInstance).getDatastoreEndpoint();
 		return DatastoreProxy.getTemplates(datastoreEndpoint);
 	}
 
-	public static String getDatastoreEndpoint(VimInstance unInstance) throws VimDriverException
-	{
-		UnConfiguration unConf = getUnConfiguration(unInstance);
-		return unConf.getDatastoreEndpoint();
-	}
-
-	public static String getConfigurationServiceEndpoint(VimInstance unInstance) throws VimDriverException
-	{
-		UnConfiguration unConf = getUnConfiguration(unInstance);
-		return unConf.getConfigurationServiceEndpoint();
-	}
-
-	public static List<String> getUnPhisicalPorts(VimInstance unInstance) throws VimDriverException
-	{
-		UnConfiguration unConf = getUnConfiguration(unInstance);
-		return unConf.getUnPhisicalPorts();
-	}
-
-	private static UnConfiguration getUnConfiguration(VimInstance unInstance) throws VimDriverException {
+	public static UnConfiguration getConfiguration(VimInstance unInstance) throws VimDriverException {
 		UnConfiguration unConf = null;
 		try
 		{

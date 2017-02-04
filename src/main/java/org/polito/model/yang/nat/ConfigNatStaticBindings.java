@@ -7,9 +7,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ConfigNatParameters {
+public class ConfigNatStaticBindings {
 
-    @JsonProperty("floating-ip")
+    @JsonProperty("floatingIP")
     private List<FloatingIp> floatingIp = new ArrayList<FloatingIp>();
 
     public List<FloatingIp> getFloatingIp() {

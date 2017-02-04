@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class NatYang {
     @JsonProperty("config-nat:interfaces")
     private ConfigNatInterfaces configNatInterfaces = new ConfigNatInterfaces();
-    @JsonProperty("config-nat:parameters")
-    private ConfigNatParameters configNatParameters = new ConfigNatParameters();
+    @JsonProperty("config-nat:staticBindings")
+    private ConfigNatStaticBindings configNatStaticBindings = new ConfigNatStaticBindings();
 
     @JsonProperty("config-nat:interfaces")
     public ConfigNatInterfaces getConfigNatInterfaces() {
@@ -20,12 +20,12 @@ public class NatYang {
         this.configNatInterfaces = configNatInterfaces;
     }
 
-	public ConfigNatParameters getConfigNatParameters() {
-		return configNatParameters;
+	public ConfigNatStaticBindings getConfigNatStaticBindings() {
+		return configNatStaticBindings;
 	}
 
-	public void setConfigNatParameters(ConfigNatParameters configNatParameters) {
-		this.configNatParameters = configNatParameters;
+	public void setConfigNatStaticBindings(ConfigNatStaticBindings configNatStaticBindings) {
+		this.configNatStaticBindings = configNatStaticBindings;
 	}
 
 }

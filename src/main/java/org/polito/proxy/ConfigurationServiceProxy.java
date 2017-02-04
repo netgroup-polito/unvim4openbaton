@@ -115,4 +115,38 @@ public class ConfigurationServiceProxy {
 		}
 		return dhcpYang;
 	}
+
+	public static NatYang getNatYang(String configurationService, String tenant, String graphId, String vnfId) throws VimDriverException {
+		NatYang natYang;
+		try
+		{
+	        URL url = new URL(configurationService + "/config/status/" + vnfId + "/" + graphId + "/" + tenant);
+	        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+	        connection.setRequestMethod("GET");
+	        connection.setRequestProperty("Accept", "application/json");
+	        int responseCode = connection.getResponseCode();
+	        if(responseCode==404)
+	        	return null;
+			//TODO: Deal with responseCode different from 200
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+			in.close();
+
+			ObjectMapper mapper = new ObjectMapper();
+			natYang = mapper.readValue(response.toString(), NatYang.class);
+
+		}
+		catch(IOException e)
+		{
+			log.error(e.getMessage(), e);
+			throw new VimDriverException(e.getMessage());
+		}
+		return natYang;
+	}
 }

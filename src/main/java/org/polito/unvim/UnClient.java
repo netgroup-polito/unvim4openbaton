@@ -23,6 +23,8 @@ import org.openbaton.vim.drivers.interfaces.VimDriver;
 import org.polito.management.ComputeManager;
 import org.polito.management.NetworkManager;
 import org.polito.management.NffgManager;
+import org.polito.model.message.FloatingIpPool;
+import org.polito.model.message.UnConfiguration;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.template.VnfTemplate;
 import org.polito.proxy.UniversalNodeProxy;
@@ -59,21 +61,9 @@ public class UnClient extends VimDriver {
 		}
 
 	@Override
-	public Server launchInstance(VimInstance vimInstance, String name, String templateId, String flavor, String keypair,
+	public Server launchInstance(VimInstance vimInstance, String name, String image, String flavor, String keypair,
 			Set<String> network, Set<String> secGroup, String userData) throws VimDriverException {
-		Nffg nffg;
-		String serverId;
-		synchronized(lock)
-		{
-			nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-			if(nffg==null)
-				throw new VimDriverException("Illegal state. A nffg must be already deployed");
-			// Create the server
-			serverId = ComputeManager.createServer(nffg, name, templateId, keypair, network, secGroup, userData);
-			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
-		}
-		Server server = ComputeManager.getServerById(nffg, serverId, UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance));
-		return server;
+		return launchInstanceAndWait(vimInstance, name, image, null, keypair, network, secGroup, userData, null, null);
 	}
 
 	@Override
@@ -96,8 +86,9 @@ public class UnClient extends VimDriver {
 		List<Server> servers = new ArrayList<>();
 		log.debug("Listing server for VimInstance with name: " + vimInstance.getName());
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
+		Nffg managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
 		if(nffg!=null)
-			servers = ComputeManager.getServers(nffg);
+			servers = ComputeManager.getServers(managementNffg,nffg,UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint());
 		return servers;
 	}
 
@@ -105,7 +96,7 @@ public class UnClient extends VimDriver {
 	public List<Network> listNetworks(VimInstance vimInstance) throws VimDriverException {
 		log.debug("Listing networks for VimInstance with name: " + vimInstance.getName());
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-		List<Network> networks = NetworkManager.getNetworks(nffg,UniversalNodeProxy.getDatastoreEndpoint(vimInstance));
+		List<Network> networks = NetworkManager.getNetworks(nffg,UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint());
 		return networks;
 	}
 
@@ -155,7 +146,7 @@ public class UnClient extends VimDriver {
 			String keyPair, Set<String> networks, Set<String> securityGroups, String userData, Map<String, String> floatingIps,
 			Set<Key> keys) throws VimDriverException {
 		log.debug("New server required:");
-		log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData));
+		log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData) + ", floatingIps: " + (floatingIps==null? "null":floatingIps) + ", keys: " + (keys==null? "null":keys) );
 		// Given an image name search the template:
 		String templateId=null;
 		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
@@ -164,7 +155,23 @@ public class UnClient extends VimDriver {
 				templateId=template.getId();
 		if(templateId==null)
 			throw new VimDriverException("The required image is no longer present");
-		return launchInstance(vimInstance, hostname, templateId, extId, keyPair, networks, securityGroups, userData);
+		
+		Nffg nffg, managementNffg;
+		String serverId;
+		synchronized(lock)
+		{
+			nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
+			managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
+			if(nffg==null || managementNffg==null)
+				throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
+			// Create the server
+			serverId = ComputeManager.createServer(nffg, hostname, templateId, keyPair, networks, securityGroups, userData);
+			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		}
+		UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
+		Server server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
+		ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
+		return server;
 	}
 
 	@Override
@@ -193,7 +200,7 @@ public class UnClient extends VimDriver {
 		Nffg managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
 		if(managementNffg==null)
 		{
-			List<String> unPhisicalPorts = UniversalNodeProxy.getUnPhisicalPorts(vimInstance);
+			List<String> unPhisicalPorts = UniversalNodeProxy.getConfiguration(vimInstance).getUnPhisicalPorts();
 			if(unPhisicalPorts.size()==0)
 				throw new VimDriverException("The Universal Node has 0 ports able to reach external network!");
 			managementNffg = NffgManager.createBootNffg(MANAGEMENT_GRAPH);
@@ -268,11 +275,11 @@ public class UnClient extends VimDriver {
 		Nffg tenantNffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
 		if(managementNffg==null || tenantNffg==null)
 			throw new VimDriverException("Illegal state");
-		String datastoreEndpoint = UniversalNodeProxy.getDatastoreEndpoint(vimInstance);
-		NetworkManager.createSubnet(managementNffg, tenantNffg, createdNetwork, subnet, datastoreEndpoint);
+		UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
+		NetworkManager.createSubnet(managementNffg, tenantNffg, createdNetwork, subnet, unConfig.getDatastoreEndpoint());
 		UniversalNodeProxy.sendNFFG(vimInstance, managementNffg);
 		UniversalNodeProxy.sendNFFG(vimInstance, tenantNffg);
-		NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance));
+		NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,unConfig.getConfigurationServiceEndpoint());
 		return subnet;
 	}
 
@@ -290,7 +297,7 @@ public class UnClient extends VimDriver {
 		Nffg tenantNffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
 		if(managementNffg==null || tenantNffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		String configurationServiceEndpoint = UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance);
+		String configurationServiceEndpoint = UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint();
 		NetworkManager.configureSubnet(managementNffg,tenantNffg,updatedNetwork,subnet,properties,configurationServiceEndpoint);
 		return subnet;
 	}
@@ -336,7 +343,7 @@ public class UnClient extends VimDriver {
 		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
 		if(nffg==null)
 			throw new VimDriverException("Illegal state. A nffg must be already deployed");
-		return NetworkManager.getNetwork(nffg,id,UniversalNodeProxy.getConfigurationServiceEndpoint(vimInstance));
+		return NetworkManager.getNetwork(nffg,id,UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint());
 	}
 
 	@Override

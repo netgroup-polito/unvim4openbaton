@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.openbaton.catalogue.nfvo.Server;
 import org.openbaton.exceptions.VimDriverException;
+import org.polito.model.message.FloatingIpPool;
 import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Vnf;
 import org.polito.unvim.UnClient;
@@ -29,7 +30,7 @@ public class ComputeManager {
 		return vnfId;
 	}
 
-	public static Server getServerById(Nffg nffg, String serverId, String configurationService) throws VimDriverException {
+	public static Server getServerById(Nffg managementNffg, Nffg nffg,  String serverId, String configurationService) throws VimDriverException {
 		log.debug("Obtaining ip addresses of the server with id: " + serverId);
 		Vnf vnfServer = NffgManager.getVnfById(nffg, serverId);
 		Server server = new Server();
@@ -37,28 +38,29 @@ public class ComputeManager {
 		server.setExtendedStatus("running");
 		server.setExtId(serverId);
 		server.setHostName(vnfServer.getName());
-		server.setFloatingIps(new HashMap<String, String>());
 		Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
 		server.setIps(networkIpAddressAssociation);
+		Map<String, String> floatingIps = NetworkManager.getFloatingIps(managementNffg, nffg, vnfServer, configurationService);
+		server.setFloatingIps(floatingIps);
 		return server;
 	}
 
-	public static List<Server> getServers(Nffg nffg) {
+	public static List<Server> getServers(Nffg managementNffg, Nffg nffg, String configurationService) throws VimDriverException {
 		List<Server> servers = new ArrayList<>();
 		List<Vnf> vnfs = NffgManager.getVnfsByDescription(nffg, SERVER_INSTANCE);
 		for(Vnf vnf: vnfs)
-		{
-			Server server = new Server();
-			server.setExtendedStatus("running");
-			server.setExtId(vnf.getId());
-			server.setHostName(vnf.getName());
-			servers.add(server);
-		}
+			servers.add(getServerById(managementNffg, nffg, vnf.getId(), configurationService));
 		return servers;
 	}
 
 	public static void destroyServer(Nffg nffg, String id) {
 		NffgManager.destroyVnf(nffg,id);
+	}
+
+	public static void assigneFloatingIps(Nffg managementNffg, Server server, Map<String, String> floatingIps,
+			String configurationServiceEndpoint, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
+		NetworkManager.implementFloatingIps(managementNffg, server.getIps(),floatingIps,configurationServiceEndpoint, externalNetwork, floatingIpPool);
+		server.setFloatingIps(floatingIps);
 	}
 
 }

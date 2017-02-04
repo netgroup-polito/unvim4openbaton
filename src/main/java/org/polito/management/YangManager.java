@@ -11,6 +11,7 @@ import org.polito.model.yang.dhcp.DhcpYang;
 import org.polito.model.yang.dhcp.GatewayIp;
 import org.polito.model.yang.dhcp.GlobalIpPool;
 import org.polito.model.yang.dhcp.Section;
+import org.polito.model.yang.nat.FloatingIp;
 import org.polito.model.yang.nat.NatYang;
 
 public class YangManager {
@@ -68,6 +69,13 @@ public class YangManager {
 			String type, String defaultGw) {
 		IfEntry iface = createIfEntry(name, address, configuration, type, defaultGw);
 		yang.getConfigNatInterfaces().getIfEntry().add(iface);
+	}
+
+	public static void addFloatingIp(NatYang yang, String privateAddress, String publicAddress) {
+		FloatingIp fip = new FloatingIp();
+		fip.setPrivateAddress(privateAddress);
+		fip.setPublicAddress(publicAddress);
+		yang.getConfigNatStaticBindings().getFloatingIp().add(fip);
 	}
 
 	public static Map<String, String> readClientAddresses(DhcpYang dhcpYang) {

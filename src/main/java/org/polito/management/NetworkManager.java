@@ -17,8 +17,11 @@ import org.polito.model.nffg.Nffg;
 import org.polito.model.nffg.Port;
 import org.polito.model.nffg.Vnf;
 import org.polito.model.template.VnfTemplate;
+import org.polito.model.message.FloatingIpPool;
 import org.polito.model.nffg.AbstractEP.Type;
+import org.polito.model.yang.IfEntry;
 import org.polito.model.yang.dhcp.DhcpYang;
+import org.polito.model.yang.nat.FloatingIp;
 import org.polito.model.yang.nat.NatYang;
 import org.polito.proxy.ConfigurationServiceProxy;
 import org.polito.proxy.DatastoreProxy;
@@ -252,8 +255,8 @@ public class NetworkManager {
 					DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, nffg.getId(), nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
 					if(dhcpYang==null)
 					{
-						if(secondsDhcpGet>29)
-							throw new VimDriverException("The Dhcp with id " + vnfSubnet.getId() + " has not be able to register itself to the configuration service in 30 seconds!");
+						if(secondsDhcpGet>44)
+							throw new VimDriverException("The Dhcp with id " + vnfSubnet.getId() + " has not be able to register itself to the configuration service in 45 seconds!");
 						secondsDhcpGet+=3;
 						log.debug("The Dhcp with id " + vnfSubnet.getId() + " is not registered to the configuration service yet. Sleeping 3 seconds... ["+secondsDhcpGet+"]");
 						try {
@@ -271,8 +274,8 @@ public class NetworkManager {
 						String ipAddress = macIpAssociation.get(mac);
 						if(ipAddress==null)
 						{
-							if(secondsIpAddress>29)
-								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 30 seconds!");
+							if(secondsIpAddress>44)
+								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 45 seconds!");
 							secondsIpAddress+=3;
 							log.debug("The Dhcp with id " + vnfSubnet.getId() + " has not assigned an Ip address to the interface with mac address: '"+ mac + "' yet. Sleeping 3 seconds... ["+secondsIpAddress+"]");
 							try {
@@ -298,6 +301,22 @@ public class NetworkManager {
 		return networkIpAddressAssociation;
 	}
 
+	public static Map<String, String> getFloatingIps(Nffg managementNffg, Nffg nffg, Vnf vnfServer, String configurationService) throws VimDriverException {
+		Map<String, String> floatingips = new HashMap<>();
+		Map<String, List<String>> networkIpAddressAssociation = getNetworkIpAddressAssociation(nffg, vnfServer, configurationService);
+		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		for(String network: networkIpAddressAssociation.keySet())
+			for(String ipInNet: networkIpAddressAssociation.get(network))
+				for(FloatingIp floatingIp: natYang.getConfigNatStaticBindings().getFloatingIp())
+					if(floatingIp.getPrivateAddress().equals(ipInNet))
+					{
+						floatingips.put(network, floatingIp.getPublicAddress());
+						break;
+					}
+		return floatingips;
+	}
+
 	static Map<String,List<String>> getNetworkAndMacAddressAssociation(Nffg nffg, Vnf vnfServer, List<Vnf> vnfNetworks)
 	{
 		Map<String,List<String>> networkMacAddressAssociation = new HashMap<>();  // netName - listOfMacAddresses
@@ -318,5 +337,57 @@ public class NetworkManager {
 			}
 		}
 		return networkMacAddressAssociation;
+	}
+
+	public static void implementFloatingIps(Nffg managementNffg, Map<String, List<String>> ipsOnNetwork, Map<String, String> floatingIps,
+			String configurationService, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
+		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		for(String network: ipsOnNetwork.keySet())
+		{
+			String floatigIp = floatingIps.get(network);
+			if(floatigIp!=null)
+			{
+				String privateIp = ipsOnNetwork.get(network).get(0);
+				if(floatigIp.equals("random"))
+					floatigIp = generateRandomFloatingIp(natYang, externalNetwork, floatingIpPool);
+					//floatigIp = "130.192.225.253";
+				YangManager.addFloatingIp(natYang, privateIp, floatigIp);
+			}
+		}
+		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);	
+	}
+
+	private static String generateRandomFloatingIp(NatYang natYang, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
+		List<String> usedPublicIp = new ArrayList<>();
+		for(IfEntry ifEntry: natYang.getConfigNatInterfaces().getIfEntry())
+			if(ifEntry.getType().equals("wan"))
+			{
+				if(ifEntry.getAddress()==null)
+					throw new VimDriverException("The Router haven't got an External Ip Address");
+				usedPublicIp.add(ifEntry.getAddress());
+				break;
+			}
+		for(FloatingIp floatingIp: natYang.getConfigNatStaticBindings().getFloatingIp())
+			usedPublicIp.add(floatingIp.getPublicAddress());
+		String generatedFloatingIp = null;
+		String startAddress = floatingIpPool.getStart();
+		String endAddress = floatingIpPool.getEnd();
+		SubnetInfo extNetInfo = new SubnetUtils(externalNetwork).getInfo();
+		if(!extNetInfo.isInRange(startAddress) || !extNetInfo.isInRange(endAddress))
+			throw new VimDriverException("The floating Ip pool is not part of the external network");
+		String candidateAddress = startAddress;
+		while(generatedFloatingIp==null)
+		{
+			if(!usedPublicIp.contains(candidateAddress))
+				generatedFloatingIp = candidateAddress;
+			else
+			{
+				if(candidateAddress.equals(endAddress))
+					throw new VimDriverException("There are not available floating Ips");
+				candidateAddress=nextIpAddress(candidateAddress);
+			}
+		}
+		return generatedFloatingIp;
 	}
 }
