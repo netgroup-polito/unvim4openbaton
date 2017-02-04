@@ -31,9 +31,14 @@ import org.polito.proxy.UniversalNodeProxy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
 public class UnClient extends VimDriver {
 	private static Logger log = LoggerFactory.getLogger(UnClient.class);
 	private static Lock lock;
+	private Gson gson = new GsonBuilder().create();
 	private static String MANAGEMENT_GRAPH = "management_graph";
 
 	public static void main(String[] args)
@@ -155,7 +160,10 @@ public class UnClient extends VimDriver {
 				templateId=template.getId();
 		if(templateId==null)
 			throw new VimDriverException("The required image is no longer present");
-		
+
+		if (keys != null && !keys.isEmpty())
+			addKeysToUserData(userData, keys);
+
 		Nffg nffg, managementNffg;
 		String serverId;
 		synchronized(lock)
@@ -173,6 +181,26 @@ public class UnClient extends VimDriver {
 		ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
 		return server;
 	}
+
+	private String addKeysToUserData(
+		      String userData, Set<Key> keys) {
+		    log.debug("Going to add all keys: " + keys.size());
+		    userData += "\n";
+		    userData += "- for x in `find /home/ -name authorized_keys`; do\n";
+		    String oldKeys = gson.toJson(keys);
+
+		    Set<Key> keysSet =
+		        new Gson()
+		            .fromJson(
+		                oldKeys, new TypeToken<Set<Key>>() {}.getType());
+
+		    for (Key key : keysSet) {
+		      log.debug("Adding key: " + key.getName());
+		      userData += "- \techo \"" + key.getPublicKey() + "\" >> $x\n";
+		    }
+		    userData += "- done\n";
+		    return userData;
+		}
 
 	@Override
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
