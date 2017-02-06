@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.apache.commons.net.util.SubnetUtils;
 import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
@@ -393,5 +394,22 @@ public class NetworkManager {
 			}
 		}
 		return generatedFloatingIp;
+	}
+
+	public static void deleteFloatingIps(Nffg managementNffg, Nffg nffg, Vnf vnfServer,
+			Map<String, List<String>> networkIpAddressAssociation, String configurationService) throws VimDriverException {
+		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		natYang.getConfigNatStaticBindings().getFloatingIp().removeIf(new Predicate<FloatingIp>() {
+
+			@Override
+			public boolean test(FloatingIp floatIp) {
+				for(List<String> ips: networkIpAddressAssociation.values())
+					if(ips.contains(floatIp.getPrivateAddress()))
+						return true;
+				return false;
+			}
+		});
+		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
 	}
 }

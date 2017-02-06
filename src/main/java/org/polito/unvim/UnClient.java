@@ -225,9 +225,11 @@ public class UnClient extends VimDriver {
 		{
 			log.debug("Delete required for server with id: " + id);
 			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-			if(nffg==null)
-				throw new VimDriverException("Illegal state. A nffg must be already deployed");
-			ComputeManager.destroyServer(nffg, id);
+			Nffg managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
+			if(nffg==null || managementNffg==null)
+				throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
+			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
+			ComputeManager.destroyServer(managementNffg, nffg, id, unConfig.getConfigurationServiceEndpoint());
 			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
 	}
