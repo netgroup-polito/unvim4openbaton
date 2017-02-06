@@ -164,6 +164,7 @@ public class UnClient extends VimDriver {
 		if (keys != null && !keys.isEmpty())
 			addKeysToUserData(userData, keys);
 
+		Server server;
 		Nffg nffg, managementNffg;
 		String serverId;
 		synchronized(lock)
@@ -176,9 +177,19 @@ public class UnClient extends VimDriver {
 			serverId = ComputeManager.createServer(nffg, hostname, templateId, keyPair, networks, securityGroups, userData);
 			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
-		UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
-		Server server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
-		ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
+		try
+		{
+			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
+			server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
+			synchronized(lock)
+			{
+				ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
+			}
+		} catch (Exception e) {
+			log.debug("An error occurs during the creation of the server with name: " + hostname);
+			deleteServerByIdAndWait(vimInstance, serverId);
+			throw new VimDriverException(e.getMessage());
+		}
 		return server;
 	}
 

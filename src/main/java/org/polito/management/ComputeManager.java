@@ -59,7 +59,9 @@ public class ComputeManager {
 
 	public static void assigneFloatingIps(Nffg managementNffg, Server server, Map<String, String> floatingIps,
 			String configurationServiceEndpoint, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
-		NetworkManager.implementFloatingIps(managementNffg, server.getIps(),floatingIps,configurationServiceEndpoint, externalNetwork, floatingIpPool);
+		Map<String,String> randomFloatIps = NetworkManager.implementFloatingIps(managementNffg, server.getIps(),floatingIps,configurationServiceEndpoint, externalNetwork, floatingIpPool);
+		for(String network: randomFloatIps.keySet())
+			floatingIps.put(network,randomFloatIps.get(network));
 		server.setFloatingIps(floatingIps);
 	}
 

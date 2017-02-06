@@ -339,8 +339,9 @@ public class NetworkManager {
 		return networkMacAddressAssociation;
 	}
 
-	public static void implementFloatingIps(Nffg managementNffg, Map<String, List<String>> ipsOnNetwork, Map<String, String> floatingIps,
+	public static Map<String,String> implementFloatingIps(Nffg managementNffg, Map<String, List<String>> ipsOnNetwork, Map<String, String> floatingIps,
 			String configurationService, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
+		Map<String,String> randomFloatingIps = new HashMap<>();
 		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
 		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
 		for(String network: ipsOnNetwork.keySet())
@@ -350,12 +351,15 @@ public class NetworkManager {
 			{
 				String privateIp = ipsOnNetwork.get(network).get(0);
 				if(floatigIp.equals("random"))
+				{
 					floatigIp = generateRandomFloatingIp(natYang, externalNetwork, floatingIpPool);
-					//floatigIp = "130.192.225.253";
+					randomFloatingIps.put(network, floatigIp);
+				}
 				YangManager.addFloatingIp(natYang, privateIp, floatigIp);
 			}
 		}
 		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);	
+		return randomFloatingIps;
 	}
 
 	private static String generateRandomFloatingIp(NatYang natYang, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
