@@ -162,7 +162,7 @@ public class UnClient extends VimDriver {
 			throw new VimDriverException("The required image is no longer present");
 
 		if (keys != null && !keys.isEmpty())
-			addKeysToUserData(userData, keys);
+			userData = addKeysToUserData(userData, keys);
 
 		Server server;
 		Nffg nffg, managementNffg;
@@ -183,7 +183,9 @@ public class UnClient extends VimDriver {
 			server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
 			synchronized(lock)
 			{
-				ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
+				if(floatingIps!=null && !floatingIps.isEmpty())
+					ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
+				//Thread.sleep(10000);
 			}
 		} catch (Exception e) {
 			log.debug("An error occurs during the creation of the server with name: " + hostname);
@@ -196,8 +198,8 @@ public class UnClient extends VimDriver {
 	private String addKeysToUserData(
 		      String userData, Set<Key> keys) {
 		    log.debug("Going to add all keys: " + keys.size());
-		    userData += "\n";
-		    userData += "- for x in `find /home/ -name authorized_keys`; do\n";
+		    userData += "for x in `find /home/ -name authorized_keys`\n";
+		    userData += "do\n";
 		    String oldKeys = gson.toJson(keys);
 
 		    Set<Key> keysSet =
@@ -207,9 +209,9 @@ public class UnClient extends VimDriver {
 
 		    for (Key key : keysSet) {
 		      log.debug("Adding key: " + key.getName());
-		      userData += "- \techo \"" + key.getPublicKey() + "\" >> $x\n";
+		      userData += "\techo \"" + key.getPublicKey() + "\" >> $x\n";
 		    }
-		    userData += "- done\n";
+		    userData += "done\n";
 		    return userData;
 		}
 
@@ -320,7 +322,9 @@ public class UnClient extends VimDriver {
 		NetworkManager.createSubnet(managementNffg, tenantNffg, createdNetwork, subnet, unConfig.getDatastoreEndpoint());
 		UniversalNodeProxy.sendNFFG(vimInstance, managementNffg);
 		UniversalNodeProxy.sendNFFG(vimInstance, tenantNffg);
-		NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,unConfig.getConfigurationServiceEndpoint());
+		synchronized (lock) {
+			NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,unConfig.getConfigurationServiceEndpoint());
+		}
 		return subnet;
 	}
 

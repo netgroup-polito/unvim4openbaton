@@ -145,6 +145,7 @@ public class NetworkManager {
 	}
 
 	public static void configureSubnet(Nffg managementNffg, Nffg tenantNffg, Network createdNetwork, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
+		boolean firstConfiguration=false;
 		// Calculate network parameters
 		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
 		String netmask = subnetInfo.getNetmask();
@@ -158,18 +159,23 @@ public class NetworkManager {
 			throw new VimDriverException("Network range is too small");
 
 		// Create Nat Yang
-		NatYang natYang = new NatYang();
+		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		if(natYang==null)
+		{
+			natYang = new NatYang();
+			firstConfiguration=true;
+		}
 		Vnf router = NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0);
 		for(Port port: router.getPorts())
-			if(port.isTrusted())
+			if(firstConfiguration && port.isTrusted())
 				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "config", null);
 			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), tenantNffg, createdNetwork.getExtId()))
 				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", null);
-			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), NffgManager.getEndpointByName(managementNffg,"managementInterface").get(0).getId()))
+			else if(firstConfiguration && NffgManager.areConnected(managementNffg, router.getId(), port.getId(), NffgManager.getEndpointByName(managementNffg,"managementInterface").get(0).getId()))
 				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "wan", null);
 
 		// Send the yang
-		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
 		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, tenantNffg.getId(), managementNffg.getId(), routerMacControlPort);
 
 		// Create Dhcp Yang

@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 public class ComputeManager {
 	private static String SERVER_INSTANCE = "Server";
-	private static Logger log = LoggerFactory.getLogger(UnClient.class);
+	private static Logger log = LoggerFactory.getLogger(ComputeManager.class);
 
 	public static String createServer(Nffg nffg, String hostname, String templateImageId, String keyPair,
 			Set<String> networks, Set<String> securityGroups, String userData){
@@ -31,7 +31,7 @@ public class ComputeManager {
 	}
 
 	public static Server getServerById(Nffg managementNffg, Nffg nffg,  String serverId, String configurationService) throws VimDriverException {
-		log.debug("Obtaining ip addresses of the server with id: " + serverId);
+		log.debug("Obtaining private ip addresses of the server with id: " + serverId);
 		Vnf vnfServer = NffgManager.getVnfById(nffg, serverId);
 		Server server = new Server();
 		server.setStatus("running");
@@ -40,6 +40,7 @@ public class ComputeManager {
 		server.setHostName(vnfServer.getName());
 		Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
 		server.setIps(networkIpAddressAssociation);
+		log.debug("Obtaining floating ip addresses of the server with id: " + serverId);
 		Map<String, String> floatingIps = NetworkManager.getFloatingIps(managementNffg, nffg, vnfServer, configurationService);
 		server.setFloatingIps(floatingIps);
 		return server;
@@ -64,7 +65,7 @@ public class ComputeManager {
 			String configurationServiceEndpoint, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
 		Map<String,String> randomFloatIps = NetworkManager.implementFloatingIps(managementNffg, server.getIps(),floatingIps,configurationServiceEndpoint, externalNetwork, floatingIpPool);
 		for(String network: randomFloatIps.keySet())
-			floatingIps.put(network,randomFloatIps.get(network));
+			floatingIps.replace(network,randomFloatIps.get(network));
 		server.setFloatingIps(floatingIps);
 	}
 
