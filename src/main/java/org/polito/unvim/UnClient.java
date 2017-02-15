@@ -37,14 +37,15 @@ import com.google.gson.reflect.TypeToken;
 
 public class UnClient extends VimDriver {
 	private static Logger log = LoggerFactory.getLogger(UnClient.class);
-	private static Lock lock;
+	private static Lock un_lock, config_lock;
 	private Gson gson = new GsonBuilder().create();
 	private static String MANAGEMENT_GRAPH = "management_graph";
 
 	public static void main(String[] args)
 		      throws NoSuchMethodException, IOException, InstantiationException, TimeoutException,
 		          IllegalAccessException, InvocationTargetException {
-		    UnClient.lock = new ReentrantLock();
+		    UnClient.un_lock = new ReentrantLock();
+		    UnClient.config_lock = new ReentrantLock();
 		    if (args.length == 6) {
 		      PluginStarter.registerPlugin(
 		    		  UnClient.class,
@@ -167,7 +168,7 @@ public class UnClient extends VimDriver {
 		Server server;
 		Nffg nffg, managementNffg;
 		String serverId;
-		synchronized(lock)
+		synchronized(un_lock)
 		{
 			nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
 			managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
@@ -177,15 +178,23 @@ public class UnClient extends VimDriver {
 			serverId = ComputeManager.createServer(nffg, hostname, templateId, keyPair, networks, securityGroups, userData);
 			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
+		UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
 		try
 		{
-			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
 			server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
-			synchronized(lock)
+		} catch (Exception e) {
+			log.debug("An error occurs during the creation of the server with name: " + hostname);
+			deleteServerById(vimInstance, serverId);
+			throw new VimDriverException(e.getMessage());
+		}
+		try
+		{
+			if(floatingIps!=null && !floatingIps.isEmpty())
 			{
-				if(floatingIps!=null && !floatingIps.isEmpty())
+				synchronized(config_lock)
+				{
 					ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
-				//Thread.sleep(10000);
+				}
 			}
 		} catch (Exception e) {
 			log.debug("An error occurs during the creation of the server with name: " + hostname);
@@ -221,9 +230,8 @@ public class UnClient extends VimDriver {
 		return launchInstanceAndWait(vimInstance, hostname, image, extId, keyPair, networks, securityGroups, userData, null, null);
 	}
 
-	@Override
-	public void deleteServerByIdAndWait(VimInstance vimInstance, String id) throws VimDriverException {
-		synchronized(lock)
+	public void deleteServerById(VimInstance vimInstance, String id) throws VimDriverException {
+		synchronized(un_lock)
 		{
 			log.debug("Delete required for server with id: " + id);
 			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
@@ -231,7 +239,25 @@ public class UnClient extends VimDriver {
 			if(nffg==null || managementNffg==null)
 				throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
 			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
-			ComputeManager.destroyServer(managementNffg, nffg, id, unConfig.getConfigurationServiceEndpoint());
+			ComputeManager.destroyServer(managementNffg, nffg, id, unConfig.getConfigurationServiceEndpoint(),true);
+			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+		}
+	}
+
+	@Override
+	public void deleteServerByIdAndWait(VimInstance vimInstance, String id) throws VimDriverException {
+		synchronized(un_lock)
+		{
+			log.debug("Delete required for server with id: " + id);
+			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
+			Nffg managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
+			if(nffg==null || managementNffg==null)
+				throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
+			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
+			synchronized(config_lock)
+			{
+				ComputeManager.destroyServer(managementNffg, nffg, id, unConfig.getConfigurationServiceEndpoint(),false);
+			}
 			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
 	}
@@ -322,7 +348,7 @@ public class UnClient extends VimDriver {
 		NetworkManager.createSubnet(managementNffg, tenantNffg, createdNetwork, subnet, unConfig.getDatastoreEndpoint());
 		UniversalNodeProxy.sendNFFG(vimInstance, managementNffg);
 		UniversalNodeProxy.sendNFFG(vimInstance, tenantNffg);
-		synchronized (lock) {
+		synchronized (config_lock) {
 			NetworkManager.configureSubnet(managementNffg, tenantNffg,createdNetwork,subnet,properties,unConfig.getConfigurationServiceEndpoint());
 		}
 		return subnet;

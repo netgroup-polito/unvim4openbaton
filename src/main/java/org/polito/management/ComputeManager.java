@@ -54,10 +54,13 @@ public class ComputeManager {
 		return servers;
 	}
 
-	public static void destroyServer(Nffg managementNffg, Nffg nffg, String id, String configurationService) throws VimDriverException {
+	public static void destroyServer(Nffg managementNffg, Nffg nffg, String id, String configurationService, boolean forced) throws VimDriverException {
 		Vnf vnfServer = NffgManager.getVnfById(nffg, id);
-		Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
-		NetworkManager.deleteFloatingIps(managementNffg, nffg, vnfServer, networkIpAddressAssociation, configurationService);
+		if(!forced)
+		{
+			Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
+			NetworkManager.deleteFloatingIps(managementNffg, nffg, vnfServer, networkIpAddressAssociation, configurationService);
+		}
 		NffgManager.destroyVnf(nffg,id);
 	}
 

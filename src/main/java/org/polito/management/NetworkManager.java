@@ -281,8 +281,8 @@ public class NetworkManager {
 						String ipAddress = macIpAssociation.get(mac);
 						if(ipAddress==null)
 						{
-							if(secondsIpAddress>44)
-								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 45 seconds!");
+							if(secondsIpAddress>82)
+								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 90 seconds!");
 							secondsIpAddress+=3;
 							log.debug("The Dhcp with id " + vnfSubnet.getId() + " has not assigned an Ip address to the interface with mac address: '"+ mac + "' yet. Sleeping 3 seconds... ["+secondsIpAddress+"]");
 							try {
