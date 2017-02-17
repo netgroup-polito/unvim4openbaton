@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import org.polito.model.yang.IfEntry;
 import org.polito.model.yang.dhcp.Client;
@@ -67,6 +68,7 @@ public class YangManager {
 
 	public static void addInterface(NatYang yang, String name, String address, String configuration,
 			String type, String defaultGw) {
+		deleteIfEntry(yang,name);
 		IfEntry iface = createIfEntry(name, address, configuration, type, defaultGw);
 		yang.getConfigNatInterfaces().getIfEntry().add(iface);
 	}
@@ -83,5 +85,17 @@ public class YangManager {
 		for(Client client: dhcpYang.getConfigDhcpServerServer().getClients())
 			map.put(client.getMacAddress(), client.getIpAddress());
 		return map;
+	}
+
+	private static void deleteIfEntry(NatYang yang, String portName)
+	{
+		yang.getConfigNatInterfaces().getIfEntry().removeIf(new Predicate<IfEntry>() {
+			@Override
+			public boolean test(IfEntry ifEntry) {
+				if(ifEntry.getName().equals(portName))
+						return true;
+				return false;
+			}
+		});
 	}
 }

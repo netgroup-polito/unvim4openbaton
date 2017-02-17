@@ -406,16 +406,19 @@ public class NetworkManager {
 			Map<String, List<String>> networkIpAddressAssociation, String configurationService) throws VimDriverException {
 		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
 		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
-		natYang.getConfigNatStaticBindings().getFloatingIp().removeIf(new Predicate<FloatingIp>() {
-
-			@Override
-			public boolean test(FloatingIp floatIp) {
-				for(List<String> ips: networkIpAddressAssociation.values())
-					if(ips.contains(floatIp.getPrivateAddress()))
-						return true;
-				return false;
-			}
-		});
+		List<FloatingIp> floatIps = natYang.getConfigNatStaticBindings().getFloatingIp();
+		List<FloatingIp> toDelete = new ArrayList<>();
+		for(FloatingIp floatIp: floatIps)
+		{
+			for(List<String> ips: networkIpAddressAssociation.values())
+				if(ips.contains(floatIp.getPrivateAddress()))
+				{
+					toDelete.add(floatIp);
+					break;
+				}
+		}
+		for(FloatingIp floatIp: toDelete)
+			floatIps.remove(floatIp);
 		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
 	}
 }

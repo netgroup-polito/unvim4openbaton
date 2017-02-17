@@ -151,57 +151,66 @@ public class UnClient extends VimDriver {
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
 			String keyPair, Set<String> networks, Set<String> securityGroups, String userData, Map<String, String> floatingIps,
 			Set<Key> keys) throws VimDriverException {
-		log.debug("New server required:");
-		log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData) + ", floatingIps: " + (floatingIps==null? "null":floatingIps) + ", keys: " + (keys==null? "null":keys) );
-		// Given an image name search the template:
-		String templateId=null;
-		List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
-		for(VnfTemplate template: templates)
-			if(template.getId().equals(image))
-				templateId=template.getId();
-		if(templateId==null)
-			throw new VimDriverException("The required image is no longer present");
-
-		if (keys != null && !keys.isEmpty())
-			userData = addKeysToUserData(userData, keys);
-
-		Server server;
-		Nffg nffg, managementNffg;
-		String serverId;
-		synchronized(un_lock)
-		{
-			nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-			managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
-			if(nffg==null || managementNffg==null)
-				throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
-			// Create the server
-			serverId = ComputeManager.createServer(nffg, hostname, templateId, keyPair, networks, securityGroups, userData);
-			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
-		}
-		UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
 		try
-		{
-			server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
-		} catch (Exception e) {
-			log.debug("An error occurs during the creation of the server with name: " + hostname);
-			deleteServerById(vimInstance, serverId);
-			throw new VimDriverException(e.getMessage());
-		}
-		try
-		{
-			if(floatingIps!=null && !floatingIps.isEmpty())
 			{
-				synchronized(config_lock)
-				{
-					ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
-				}
+			log.debug("New server required:");
+			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData) + ", floatingIps: " + (floatingIps==null? "null":floatingIps) + ", keys: " + (keys==null? "null":keys) );
+			// Given an image name search the template:
+			String templateId=null;
+			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
+			for(VnfTemplate template: templates)
+				if(template.getId().equals(image))
+					templateId=template.getId();
+			if(templateId==null)
+				throw new VimDriverException("The required image is no longer present");
+	
+			if (keys != null && !keys.isEmpty())
+				userData = addKeysToUserData(userData, keys);
+	
+			Server server;
+			Nffg nffg, managementNffg;
+			String serverId;
+			synchronized(un_lock)
+			{
+				nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
+				managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
+				if(nffg==null || managementNffg==null)
+					throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
+				// Create the server
+				serverId = ComputeManager.createServer(nffg, hostname, templateId, keyPair, networks, securityGroups, userData);
+				UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 			}
-		} catch (Exception e) {
-			log.debug("An error occurs during the creation of the server with name: " + hostname);
-			deleteServerByIdAndWait(vimInstance, serverId);
+			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
+			try
+			{
+				server = ComputeManager.getServerById(managementNffg, nffg, serverId, unConfig.getConfigurationServiceEndpoint());
+			} catch (Exception e) {
+				log.debug("An error occurs during the creation of the server with name: " + hostname);
+				deleteServerById(vimInstance, serverId);
+				throw new VimDriverException(e.getMessage());
+			}
+			try
+			{
+				if(floatingIps!=null && !floatingIps.isEmpty())
+				{
+					synchronized(config_lock)
+					{
+						ComputeManager.assigneFloatingIps(managementNffg,server,floatingIps, unConfig.getConfigurationServiceEndpoint(), unConfig.getExternalNetwork(), unConfig.getFloatingIpPool());
+					}
+				}
+			} catch (Exception e) {
+				log.debug("An error occurs during the creation of the server with name: " + hostname);
+				deleteServerByIdAndWait(vimInstance, serverId);
+				throw new VimDriverException(e.getMessage());
+			}
+			return server;
+		}
+		catch(Exception e)
+		{
+			log.debug(e.getMessage());
+			log.debug(e.getStackTrace().toString());
 			throw new VimDriverException(e.getMessage());
 		}
-		return server;
 	}
 
 	private String addKeysToUserData(
