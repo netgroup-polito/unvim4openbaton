@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import org.polito.model.yang.IfEntry;
 import org.polito.model.yang.dhcp.Client;
@@ -89,13 +88,15 @@ public class YangManager {
 
 	private static void deleteIfEntry(NatYang yang, String portName)
 	{
-		yang.getConfigNatInterfaces().getIfEntry().removeIf(new Predicate<IfEntry>() {
-			@Override
-			public boolean test(IfEntry ifEntry) {
-				if(ifEntry.getName().equals(portName))
-						return true;
-				return false;
+		IfEntry toRemove=null;
+		List<IfEntry> ifEntries =  yang.getConfigNatInterfaces().getIfEntry();
+		for(IfEntry ifEntry: ifEntries)
+			if(ifEntry.getName().equals(portName))
+			{
+				toRemove=ifEntry;
+				break;
 			}
-		});
+		if(toRemove!=null)
+			ifEntries.remove(toRemove);
 	}
 }
