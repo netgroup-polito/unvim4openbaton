@@ -6,7 +6,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.openbaton.catalogue.nfvo.VimInstance;
 import org.openbaton.exceptions.VimDriverException;
@@ -63,6 +65,14 @@ public class UniversalNodeProxy {
 		}
 		return unConf;
 	}
+	
+	public static Map<String,Nffg> getNFFGs(VimInstance unInstance, String... ids) throws VimDriverException
+	{
+		Map<String,Nffg> graphs = new HashMap<>();
+		for(String id: ids)
+			graphs.put(id, getNFFG(unInstance, id));
+		return graphs;
+	}
 
 	public static Nffg getNFFG(VimInstance unInstance, String NffgId) throws VimDriverException
 	{
@@ -102,6 +112,12 @@ public class UniversalNodeProxy {
 		return nffg;
 	}
 
+	public static void sendNFFGs(VimInstance unInstance, Nffg... nffgs) throws VimDriverException
+	{
+		for(Nffg nffg: nffgs)
+			sendNFFG(unInstance, nffg);
+	}
+
 	public static void sendNFFG(VimInstance unInstance, Nffg nffg) throws VimDriverException
 	{
 		try
@@ -112,6 +128,8 @@ public class UniversalNodeProxy {
 	        connection.setDoOutput(true);
 	        connection.setRequestMethod("PUT");
 	        connection.setRequestProperty("Content-Type", "application/json");
+	        connection.setRequestProperty("Connection", "close");
+
 	        if(token!=null)
 	        	connection.setRequestProperty("X-Auth-Token", token);
 

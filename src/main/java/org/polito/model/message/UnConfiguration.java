@@ -7,6 +7,7 @@ public class UnConfiguration {
 	private String configurationServiceEndpoint;
 	private List<String> unPhisicalPorts;
 	private String externalNetwork;
+	private String wanPort;
 	private FloatingIpPool floatingIpPool;
 
 	public String getDatastoreEndpoint() {
@@ -47,6 +48,14 @@ public class UnConfiguration {
 
 	public void setExternalNetwork(String externalNetwork) {
 		this.externalNetwork = externalNetwork;
+	}
+
+	public String getWanPort() {
+		return wanPort;
+	}
+
+	public void setWanPort(String wanPort) {
+		this.wanPort = wanPort;
 	}
 
 }

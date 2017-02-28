@@ -13,6 +13,8 @@ public class Nffg {
 	private List<EndpointWrapper> endpoints = new ArrayList<>();
 	@JsonProperty("VNFs")
 	private List<Vnf> vnfs = new ArrayList<>();
+	@JsonProperty("node-config")
+	private List<NodeConfiguration> nodeConfigurations = new ArrayList<>();
 	@JsonProperty("big-switch")
 	private BigSwitch bigSwitch;
 
@@ -71,5 +73,13 @@ public class Nffg {
 	@JsonIgnore
 	public List<FlowRule> getFlowRules() {
 		return bigSwitch.getFlowRules();
+	}
+
+	public List<NodeConfiguration> getNodeConfigurations() {
+		return nodeConfigurations;
+	}
+
+	public void setNodeConfigurations(List<NodeConfiguration> nodeConfigurations) {
+		this.nodeConfigurations = nodeConfigurations;
 	}
 }

@@ -45,7 +45,7 @@ public class NffgManager {
 		return newId;
 	}
 
-	public static Nffg createBootNffg(String id) {
+	public static Nffg createEmptyNffg(String id) {
 		Nffg nffg = new Nffg();
 		nffg.setId(id);
 		nffg.setBigSwitch(new BigSwitch());
@@ -439,6 +439,10 @@ public class NffgManager {
 				}
 		destroyEndpoint(nffg,internalNffg.getId());
 		destroyEndpoint(otherNffg,internalOtherNffg.getId());
+	}
+
+	public static void eraseRules(Nffg nffg) {
+		nffg.getBigSwitch().setFlowRules(new ArrayList<FlowRule>()); 
 	}
 
 }

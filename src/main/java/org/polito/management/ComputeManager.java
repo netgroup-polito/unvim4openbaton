@@ -30,7 +30,7 @@ public class ComputeManager {
 		return vnfId;
 	}
 
-	public static Server getServerById(Nffg managementNffg, Nffg nffg,  String serverId, String configurationService) throws VimDriverException {
+	public static Server getServerById(Nffg operatorNffg, Nffg nffg,  String serverId, String configurationService) throws VimDriverException {
 		log.debug("Obtaining private ip addresses of the server with id: " + serverId);
 		Vnf vnfServer = NffgManager.getVnfById(nffg, serverId);
 		Server server = new Server();
@@ -41,32 +41,32 @@ public class ComputeManager {
 		Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
 		server.setIps(networkIpAddressAssociation);
 		log.debug("Obtaining floating ip addresses of the server with id: " + serverId);
-		Map<String, String> floatingIps = NetworkManager.getFloatingIps(managementNffg, nffg, vnfServer, configurationService);
+		Map<String, String> floatingIps = NetworkManager.getFloatingIps(operatorNffg, nffg, vnfServer, configurationService);
 		server.setFloatingIps(floatingIps);
 		return server;
 	}
 
-	public static List<Server> getServers(Nffg managementNffg, Nffg nffg, String configurationService) throws VimDriverException {
+	public static List<Server> getServers(Nffg operatorNffg, Nffg nffg, String configurationService) throws VimDriverException {
 		List<Server> servers = new ArrayList<>();
 		List<Vnf> vnfs = NffgManager.getVnfsByDescription(nffg, SERVER_INSTANCE);
 		for(Vnf vnf: vnfs)
-			servers.add(getServerById(managementNffg, nffg, vnf.getId(), configurationService));
+			servers.add(getServerById(operatorNffg, nffg, vnf.getId(), configurationService));
 		return servers;
 	}
 
-	public static void destroyServer(Nffg managementNffg, Nffg nffg, String id, String configurationService, boolean forced) throws VimDriverException {
+	public static void destroyServer(Nffg operatorNffg, Nffg nffg, String id, String configurationService, boolean forced) throws VimDriverException {
 		Vnf vnfServer = NffgManager.getVnfById(nffg, id);
 		if(!forced)
 		{
 			Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
-			NetworkManager.deleteFloatingIps(managementNffg, nffg, vnfServer, networkIpAddressAssociation, configurationService);
+			NetworkManager.deleteFloatingIps(operatorNffg, nffg, vnfServer, networkIpAddressAssociation, configurationService);
 		}
 		NffgManager.destroyVnf(nffg,id);
 	}
 
-	public static void assigneFloatingIps(Nffg managementNffg, Server server, Map<String, String> floatingIps,
+	public static void assigneFloatingIps(Nffg operatorNffg, Server server, Map<String, String> floatingIps,
 			String configurationServiceEndpoint, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
-		Map<String,String> randomFloatIps = NetworkManager.implementFloatingIps(managementNffg, server.getIps(),floatingIps,configurationServiceEndpoint, externalNetwork, floatingIpPool);
+		Map<String,String> randomFloatIps = NetworkManager.implementFloatingIps(operatorNffg, server.getIps(),floatingIps,configurationServiceEndpoint, externalNetwork, floatingIpPool);
 		for(String network: randomFloatIps.keySet())
 			floatingIps.put(network,randomFloatIps.get(network));
 		server.setFloatingIps(floatingIps);

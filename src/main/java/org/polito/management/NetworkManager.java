@@ -33,22 +33,28 @@ import org.slf4j.LoggerFactory;
 public class NetworkManager {
 	private static final String NETWORK_PREFIX = "SW_";
 	private static final String SUBNET_PREFIX = "DHCP_";
-	private static final String ROUTER_PREFIX = "ROUTER_";
 	private static final String NETWORK = "network";
 	private static final String SUBNET = "subnet";
-	private static final String MANAGEMENT_NETWORK = "manag_network";
-	private static final String MANAGEMENT_SUBNET = "manag_subnet";
-	private static final String MANAGEMENT_ROUTER = "manag_extNet";
+	private static final String MANAGEMENT_SWITCH = "manag_SWITCH";
+	private static final String MANAGEMENT_DHCP = "manag_DHCP";
+	private static final String MANAGEMENT_ROUTER = "manag_ROUTER";
+	private static final String MANAGEMENT_SWITCH_TEMPLATE = "managementSwitch";
+	private static final String MANAGEMENT_DHCP_TEMPLATE = "managementDhcp";
+	private static final String MANAGEMENT_ROUTER_TEMPLATE = "managementRouter";
+	private static final String OPERATOR_SWITCH = "operator_SWITCH";
+	private static final String OPERATOR_ROUTER = "operator_ROUTER";
+	private static final String OPERATOR_SWITCH_TEMPLATE = MANAGEMENT_SWITCH_TEMPLATE;
+	private static final String OPERATOR_ROUTER_TEMPLATE = "operatorRouter";
 	private static Logger log = LoggerFactory.getLogger(UnClient.class);
 
 
-	public static void createNetwork(Nffg managementNffg, Nffg tenantNffg, Network network) {
+	public static void createNetwork(Nffg operatorNffg, Nffg tenantNffg, Network network) {
 		String vnfNetId = NffgManager.getNewId(tenantNffg.getVnfs());
 		NffgManager.createVnf(tenantNffg,vnfNetId,NETWORK_PREFIX + network.getName(),NETWORK,"switch",null);
 		network.setExtId(vnfNetId);
 		// attach the new switch (in the tenant graph) to the router (in the management graph)
-		String managemtnRouterId = NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId();
-		NffgManager.connectGraphToGraph(tenantNffg,vnfNetId,managementNffg,managemtnRouterId);
+		String moperatorRouterId = NffgManager.getVnfsByDescription(operatorNffg, OPERATOR_ROUTER).get(0).getId();
+		NffgManager.connectGraphToGraph(tenantNffg,vnfNetId,operatorNffg,moperatorRouterId);
 	}
 
 	public static void createSubnet(Nffg managementNffg, Nffg tenantNffg, Network network, Subnet subnet, String datastoreEndpoint) throws VimDriverException
@@ -61,7 +67,7 @@ public class NetworkManager {
 			NffgManager.setTemplateToVnf(tenantNffg,vnfSubId,vnfTemplate);
 		}
 		subnet.setExtId(vnfSubId);
-		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_NETWORK).get(0).getId();
+		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_SWITCH).get(0).getId();
 		NffgManager.connectGraphToGraph(tenantNffg,vnfSubId,managementNffg,managementNetId,true); // trusted port!!
 		NffgManager.connectVnfToVnf(tenantNffg,vnfSubId,network.getExtId(),false);
 	}
@@ -80,7 +86,7 @@ public class NetworkManager {
 		net.setExtId(vnfNet.getId());
 		net.setName(vnfNet.getName().replaceAll(NETWORK_PREFIX, ""));
 		Set<Subnet> subnets = new HashSet<>();
-		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, MANAGEMENT_SUBNET))
+		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, MANAGEMENT_DHCP))
 			for(Port vnfNetPort: vnfNet.getPorts())
 				if(NffgManager.areConnected(nffg, vnfNet.getId(), vnfNetPort.getId(), vnfSub.getId()))
 				{
@@ -92,7 +98,7 @@ public class NetworkManager {
 	}
 
 	private static Subnet getSubnet(Nffg nffg, Vnf vnfSubnet, String configurationService) throws VimDriverException {
-		DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, "openbaton", nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
+		DhcpYang dhcpYang = ConfigurationServiceProxy.getDhcpYang(configurationService, nffg.getId(), nffg.getId(), NffgManager.getMacControlPort(nffg, vnfSubnet.getId()));
 		String gatewayIp = YangManager.getServerDefaultGatewayIp(dhcpYang);
 		String gatewayMask = YangManager.getServerDefaultGatewayMask(dhcpYang);
 		SubnetInfo subnetInfo = new SubnetUtils(gatewayIp,gatewayMask).getInfo();
@@ -104,23 +110,40 @@ public class NetworkManager {
 		return subnet;
 	}
 
-	public static void createManagementNetwork(Nffg nffg, List<String> unPhisicalPorts) {
-		String managementSwId = NffgManager.getNewId(nffg.getVnfs());
-		String managementDhcpId = NffgManager.getNewId(nffg.getVnfs());
-		String managementRouterId = NffgManager.getNewId(nffg.getVnfs());
-		String managementHoststackId = NffgManager.getNewId(nffg.getEndpoints());
-		String managementInterfaceId = NffgManager.getNewId(nffg.getEndpoints());
-		NffgManager.createVnf(nffg, managementSwId, NETWORK_PREFIX + MANAGEMENT_NETWORK, MANAGEMENT_NETWORK, null, "managementSwitch");
-		NffgManager.createVnf(nffg, managementDhcpId, SUBNET_PREFIX + MANAGEMENT_SUBNET, MANAGEMENT_SUBNET, null, "managementDhcp");
-		NffgManager.createVnf(nffg, managementRouterId, ROUTER_PREFIX + MANAGEMENT_ROUTER, MANAGEMENT_ROUTER, null, "managementRouter");
-		NffgManager.createEndpoint(nffg,managementHoststackId,"managementHoststack",Type.HOSTSTACK, "static", "192.168.4.1");
-		NffgManager.createEndpoint(nffg,managementInterfaceId,"managementInterface",Type.INTERFACE, unPhisicalPorts.get(0));
-		NffgManager.connectVnfToVnf(nffg,managementSwId,managementDhcpId,false);
-		NffgManager.connectVnfToVnf(nffg,managementRouterId,managementSwId,true);
-		NffgManager.connectEndpointToVnf(nffg,managementHoststackId,managementSwId);
-		NffgManager.connectEndpointToVnf(nffg,managementInterfaceId,managementRouterId);
-	}
+	public static Map<String,Nffg> createBootGraphs(Nffg operatorNffg)
+	{
+		// Creating management Graph
+		Nffg managementNffg = NffgManager.createEmptyNffg("management_graph");
+		String managementSwId = NffgManager.getNewId(managementNffg.getVnfs());
+		String managementDhcpId = NffgManager.getNewId(managementNffg.getVnfs());
+		String managementRouterId = NffgManager.getNewId(managementNffg.getVnfs());
+		NffgManager.createVnf(managementNffg, managementSwId, MANAGEMENT_SWITCH, MANAGEMENT_SWITCH, null, MANAGEMENT_SWITCH_TEMPLATE);
+		NffgManager.createVnf(managementNffg, managementDhcpId, MANAGEMENT_DHCP, MANAGEMENT_DHCP, null, MANAGEMENT_DHCP_TEMPLATE);
+		NffgManager.createVnf(managementNffg, managementRouterId, MANAGEMENT_ROUTER, MANAGEMENT_ROUTER, null, MANAGEMENT_ROUTER_TEMPLATE);
+		NffgManager.connectVnfToVnf(managementNffg,managementSwId,managementDhcpId,false);
+		NffgManager.connectVnfToVnf(managementNffg,managementRouterId,managementSwId,true);
 
+		// Updating operator Graph
+		NffgManager.eraseRules(operatorNffg);
+		String operatorSwId = NffgManager.getNewId(operatorNffg.getVnfs());
+		String operatorRouterId = NffgManager.getNewId(operatorNffg.getVnfs());
+		String operatorHoststackId = NffgManager.getEndpointByName(operatorNffg, "operatorHoststack").get(0).getId();
+		String wanInterfaceId = NffgManager.getEndpointByName(operatorNffg, "wanInterface").get(0).getId();
+		NffgManager.createVnf(operatorNffg, operatorSwId, OPERATOR_SWITCH, OPERATOR_SWITCH, null, OPERATOR_SWITCH_TEMPLATE);
+		NffgManager.createVnf(operatorNffg, operatorRouterId, OPERATOR_ROUTER, OPERATOR_ROUTER, null, OPERATOR_ROUTER_TEMPLATE);
+		NffgManager.connectEndpointToVnf(operatorNffg,operatorHoststackId,operatorSwId);
+		NffgManager.connectEndpointToVnf(operatorNffg,wanInterfaceId,operatorSwId);
+
+		// Connecting the two graphs
+		Map<String,Nffg> graphs = new HashMap<String, Nffg>();
+		NffgManager.connectGraphToGraph(operatorNffg, operatorRouterId, managementNffg, managementSwId, true);
+		NffgManager.connectGraphToGraph(managementNffg, managementRouterId, operatorNffg, operatorSwId);
+		NffgManager.connectVnfToVnf(operatorNffg,operatorRouterId,operatorSwId,false);
+		graphs.put(operatorNffg.getId(), operatorNffg);
+		graphs.put(managementNffg.getId(), managementNffg);
+		return graphs;
+	}
+	
 	private static final String nextIpAddress(final String input) {
 	    final String[] tokens = input.split("\\.");
 	    if (tokens.length != 4)
@@ -143,7 +166,7 @@ public class NetworkManager {
 	    .toString();
 	}
 
-	public static void configureSubnet(Nffg managementNffg, Nffg tenantNffg, Network createdNetwork, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
+	public static void configureSubnet(Nffg managementNffg, Nffg operatorNffg, Nffg tenantNffg, Network createdNetwork, Subnet subnet, Properties properties, String configurationService) throws VimDriverException {
 		boolean firstConfiguration=false;
 		// Calculate network parameters
 		SubnetInfo subnetInfo = new SubnetUtils(subnet.getCidr()).getInfo();
@@ -158,24 +181,24 @@ public class NetworkManager {
 			throw new VimDriverException("Network range is too small");
 
 		// Create Nat Yang
-		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
-		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		Vnf router = NffgManager.getVnfsByDescription(operatorNffg, OPERATOR_ROUTER).get(0);
+		String routerMacControlPort = NffgManager.getMacControlPort(operatorNffg,router.getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
 		if(natYang==null)
 		{
 			natYang = new NatYang();
 			firstConfiguration=true;
 		}
-		Vnf router = NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0);
 		for(Port port: router.getPorts())
 			if(firstConfiguration && port.isTrusted())
 				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "config", null);
-			else if(NffgManager.areConnected(managementNffg, router.getId(), port.getId(), tenantNffg, createdNetwork.getExtId()))
+			else if(NffgManager.areConnected(operatorNffg, router.getId(), port.getId(), tenantNffg, createdNetwork.getExtId()))
 				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", null);
-			else if(firstConfiguration && NffgManager.areConnected(managementNffg, router.getId(), port.getId(), NffgManager.getEndpointByName(managementNffg,"managementInterface").get(0).getId()))
+			else if(firstConfiguration && NffgManager.areConnected(operatorNffg, router.getId(), port.getId(), NffgManager.getVnfsByDescription(operatorNffg,OPERATOR_SWITCH).get(0).getId()))
 				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "wan", null);
 
 		// Send the yang
-		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, tenantNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
 
 		// Create Dhcp Yang
 		DhcpYang dhcpYang = new DhcpYang();
@@ -189,7 +212,7 @@ public class NetworkManager {
 			if(port.isTrusted())
 				YangManager.addInterface(dhcpYang, port.getName(), null, "dhcp", "config", null);
 			else
-				YangManager.addInterface(dhcpYang, port.getName(), dhcpUserPortIp, "static", "dhcp", defaultGateway);
+				YangManager.addInterface(dhcpYang, port.getName(), dhcpUserPortIp, "static", "dhcp", null);
 
 		// Send the yang
 		String dhcpMacControlPort = NffgManager.getMacControlPort(tenantNffg,subnet.getExtId());
@@ -198,8 +221,8 @@ public class NetworkManager {
 		subnet.setGatewayIp(defaultGateway);
 	}
 
-	public static void deleteNetwork(Nffg tenantNffg, Nffg managementNffg, String id) {
-		NffgManager.disconnectGraphs(tenantNffg,id,managementNffg);
+	public static void deleteNetwork(Nffg tenantNffg, Nffg operatorNffg, String id) {
+		NffgManager.disconnectGraphs(tenantNffg,id,operatorNffg);
 		NffgManager.destroyVnf(tenantNffg,id);
 	}
 
@@ -307,11 +330,11 @@ public class NetworkManager {
 		return networkIpAddressAssociation;
 	}
 
-	public static Map<String, String> getFloatingIps(Nffg managementNffg, Nffg nffg, Vnf vnfServer, String configurationService) throws VimDriverException {
+	public static Map<String, String> getFloatingIps(Nffg operatorNffg, Nffg nffg, Vnf vnfServer, String configurationService) throws VimDriverException {
 		Map<String, String> floatingips = new HashMap<>();
 		Map<String, List<String>> networkIpAddressAssociation = getNetworkIpAddressAssociation(nffg, vnfServer, configurationService);
-		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
-		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		String routerMacControlPort = NffgManager.getMacControlPort(operatorNffg,NffgManager.getVnfsByDescription(operatorNffg, OPERATOR_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
 		for(String network: networkIpAddressAssociation.keySet())
 			for(String ipInNet: networkIpAddressAssociation.get(network))
 				for(FloatingIp floatingIp: natYang.getConfigNatStaticBindings().getFloatingIp())
@@ -345,11 +368,11 @@ public class NetworkManager {
 		return networkMacAddressAssociation;
 	}
 
-	public static Map<String,String> implementFloatingIps(Nffg managementNffg, Map<String, List<String>> ipsOnNetwork, Map<String, String> floatingIps,
+	public static Map<String,String> implementFloatingIps(Nffg operatorNffg, Map<String, List<String>> ipsOnNetwork, Map<String, String> floatingIps,
 			String configurationService, String externalNetwork, FloatingIpPool floatingIpPool) throws VimDriverException {
 		Map<String,String> randomFloatingIps = new HashMap<>();
-		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
-		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		String routerMacControlPort = NffgManager.getMacControlPort(operatorNffg,NffgManager.getVnfsByDescription(operatorNffg, OPERATOR_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
 		for(String network: ipsOnNetwork.keySet())
 		{
 			String floatigIp = floatingIps.get(network);
@@ -364,7 +387,7 @@ public class NetworkManager {
 				YangManager.addFloatingIp(natYang, privateIp, floatigIp);
 			}
 		}
-		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);	
+		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);	
 		return randomFloatingIps;
 	}
 
@@ -401,10 +424,10 @@ public class NetworkManager {
 		return generatedFloatingIp;
 	}
 
-	public static void deleteFloatingIps(Nffg managementNffg, Nffg nffg, Vnf vnfServer,
+	public static void deleteFloatingIps(Nffg operatorNffg, Nffg nffg, Vnf vnfServer,
 			Map<String, List<String>> networkIpAddressAssociation, String configurationService) throws VimDriverException {
-		String routerMacControlPort = NffgManager.getMacControlPort(managementNffg,NffgManager.getVnfsByDescription(managementNffg, MANAGEMENT_ROUTER).get(0).getId());
-		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		String routerMacControlPort = NffgManager.getMacControlPort(operatorNffg,NffgManager.getVnfsByDescription(operatorNffg, OPERATOR_ROUTER).get(0).getId());
+		NatYang natYang = ConfigurationServiceProxy.getNatYang(configurationService, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
 		List<FloatingIp> floatIps = natYang.getConfigNatStaticBindings().getFloatingIp();
 		List<FloatingIp> toDelete = new ArrayList<>();
 		for(FloatingIp floatIp: floatIps)
@@ -418,6 +441,6 @@ public class NetworkManager {
 		}
 		for(FloatingIp floatIp: toDelete)
 			floatIps.remove(floatIp);
-		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, managementNffg.getId(), managementNffg.getId(), routerMacControlPort);
+		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
 	}
 }
