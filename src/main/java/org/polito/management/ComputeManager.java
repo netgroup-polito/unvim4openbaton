@@ -19,14 +19,20 @@ public class ComputeManager {
 	private static String SERVER_INSTANCE = "Server";
 	private static Logger log = LoggerFactory.getLogger(ComputeManager.class);
 
-	public static String createServer(Nffg nffg, String hostname, String templateImageId, String keyPair,
+	public static String createServer(Nffg managementNffg, Nffg tenantNffg, String hostname, String templateImageId, String keyPair,
 			Set<String> networks, Set<String> securityGroups, String userData){
-		String vnfId = NffgManager.getNewId(nffg.getVnfs());
-		NffgManager.createVnf(nffg,vnfId,hostname,SERVER_INSTANCE,null,templateImageId);
+		String vnfId = NffgManager.getNewId(tenantNffg.getVnfs());
+		NffgManager.createVnf(tenantNffg,vnfId,hostname,SERVER_INSTANCE,null,templateImageId);
+		// This is the first connection of the vnf, so the used port will have the name 'eth0'
+		// Otherwise the information of the control port could be read from the template
+		NetworkManager.connectToManagementNetwork(managementNffg,tenantNffg,vnfId);
 		if(userData!=null)
-			NffgManager.setUserDataToVnf(nffg,vnfId,userData);
+		{
+			userData=userData.replace("export MANAGEMENT_PORT=", "export MANAGEMENT_PORT=eth0");
+			NffgManager.setUserDataToVnf(tenantNffg,vnfId,userData);
+		}
 		for(String networkId: networks)
-			NffgManager.connectVnfToVnf(nffg, vnfId, networkId, true);
+			NffgManager.connectVnfToVnf(tenantNffg, vnfId, networkId, true);
 		return vnfId;
 	}
 
@@ -54,14 +60,15 @@ public class ComputeManager {
 		return servers;
 	}
 
-	public static void destroyServer(Nffg operatorNffg, Nffg nffg, String id, String configurationService, boolean forced) throws VimDriverException {
-		Vnf vnfServer = NffgManager.getVnfById(nffg, id);
+	public static void destroyServer(Nffg managementNffg, Nffg operatorNffg, Nffg tenantNffg, String id, String configurationService, boolean forced) throws VimDriverException {
+		Vnf vnfServer = NffgManager.getVnfById(tenantNffg, id);
 		if(!forced)
 		{
-			Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(nffg,  vnfServer, configurationService);
-			NetworkManager.deleteFloatingIps(operatorNffg, nffg, vnfServer, networkIpAddressAssociation, configurationService);
+			Map<String,List<String>> networkIpAddressAssociation = NetworkManager.getNetworkIpAddressAssociation(tenantNffg,  vnfServer, configurationService);
+			NetworkManager.deleteFloatingIps(operatorNffg, tenantNffg, vnfServer, networkIpAddressAssociation, configurationService);
 		}
-		NffgManager.destroyVnf(nffg,id);
+		NetworkManager.disconnectToManagementNetwork(managementNffg, tenantNffg, id);
+		NffgManager.destroyVnf(tenantNffg,id);
 	}
 
 	public static void assigneFloatingIps(Nffg operatorNffg, Server server, Map<String, String> floatingIps,

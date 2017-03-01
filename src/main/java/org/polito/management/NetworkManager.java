@@ -86,7 +86,7 @@ public class NetworkManager {
 		net.setExtId(vnfNet.getId());
 		net.setName(vnfNet.getName().replaceAll(NETWORK_PREFIX, ""));
 		Set<Subnet> subnets = new HashSet<>();
-		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, MANAGEMENT_DHCP))
+		for(Vnf vnfSub: NffgManager.getVnfsByDescription(nffg, SUBNET))
 			for(Port vnfNetPort: vnfNet.getPorts())
 				if(NffgManager.areConnected(nffg, vnfNet.getId(), vnfNetPort.getId(), vnfSub.getId()))
 				{
@@ -216,18 +216,26 @@ public class NetworkManager {
 
 		// Send the yang
 		String dhcpMacControlPort = NffgManager.getMacControlPort(tenantNffg,subnet.getExtId());
+//		try {
+//			Thread.sleep(new Long(10000));
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		ConfigurationServiceProxy.sendDhcpYang(configurationService, dhcpYang, tenantNffg.getId(), tenantNffg.getId(), dhcpMacControlPort);
 
 		subnet.setGatewayIp(defaultGateway);
 	}
 
 	public static void deleteNetwork(Nffg tenantNffg, Nffg operatorNffg, String id) {
-		NffgManager.disconnectGraphs(tenantNffg,id,operatorNffg);
+		String operatorRouterId = NffgManager.getVnfsByDescription(operatorNffg, OPERATOR_ROUTER).get(0).getId();
+		NffgManager.disconnectGraphs(tenantNffg,id,operatorNffg,operatorRouterId);
 		NffgManager.destroyVnf(tenantNffg,id);
 	}
 
 	public static void deleteSubnet(Nffg tenantNffg, Nffg managementNffg, String id) {
-		NffgManager.disconnectGraphs(tenantNffg,id,managementNffg);
+		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_SWITCH).get(0).getId();
+		NffgManager.disconnectGraphs(tenantNffg,id,managementNffg,managementNetId);
 		NffgManager.destroyVnf(tenantNffg,id);
 	}
 
@@ -442,5 +450,15 @@ public class NetworkManager {
 		for(FloatingIp floatIp: toDelete)
 			floatIps.remove(floatIp);
 		ConfigurationServiceProxy.sendNatYang(configurationService, natYang, operatorNffg.getId(), operatorNffg.getId(), routerMacControlPort);
+	}
+
+	public static void connectToManagementNetwork(Nffg managementNffg, Nffg tenantNffg, String vnfId) {
+		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_SWITCH).get(0).getId();
+		NffgManager.connectGraphToGraph(tenantNffg,vnfId,managementNffg,managementNetId);
+	}
+
+	public static void disconnectToManagementNetwork(Nffg managementNffg, Nffg tenantNffg, String id) {
+		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_SWITCH).get(0).getId();
+		NffgManager.disconnectGraphs(managementNffg, managementNetId, tenantNffg, id);
 	}
 }

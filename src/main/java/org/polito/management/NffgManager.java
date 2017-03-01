@@ -411,32 +411,36 @@ public class NffgManager {
 	public static void connectGraphToGraph(Nffg nffg, String vnfId, Nffg otherNffg,	String otherVnfId, boolean trusted) {
 		String nffgInternalId = NffgManager.getNewId(nffg.getEndpoints());
 		String otherNffgInternalId = NffgManager.getNewId(otherNffg.getEndpoints());
-		String internalGroup = nffg.getId() + "_" + otherNffg.getId() + "_" + nffgInternalId + "_" + otherNffgInternalId;
+		String internalGroup = nffg.getId() + "_" + otherNffg.getId() + "_" + vnfId + "_" + otherVnfId;
 		createEndpoint(nffg,nffgInternalId,"merge_point",Type.INTERNAL, internalGroup);
 		connectEndpointToVnf(nffg, nffgInternalId, vnfId, trusted);
 		createEndpoint(otherNffg,otherNffgInternalId,"merge_point",Type.INTERNAL, internalGroup);
 		connectEndpointToVnf(otherNffg, otherNffgInternalId, otherVnfId);
 	}
 
-	public static void disconnectGraphs(Nffg nffg, String vnfId, Nffg otherNffg) {
+	public static void disconnectGraphs(Nffg nffg, String vnfId, Nffg otherNffg, String otherVnfId) {
+		String internalGroup1 = nffg.getId() + "_" + otherNffg.getId() + "_" + vnfId + "_" + otherVnfId;
+		String internalGroup2 = otherNffg.getId() + "_" + nffg.getId() + "_" + otherVnfId + "_" + vnfId;
 		EndpointWrapper internalNffg = null;
-		List<EndpointWrapper> endpointsWrap = nffg.getEndpoints();
-		for(EndpointWrapper endpointWrap: endpointsWrap)
-			if(endpointWrap.getEndpoint().getClass() == InternalEndPoint.class )
+		EndpointWrapper internalOtherNffg = null;
+		for(EndpointWrapper ew: getEndpointByName(nffg, "merge_point"))
+		{
+			String internalGroup=((InternalEndPoint)ew.getEndpoint()).getInternalGroup();
+			if(internalGroup.equals(internalGroup1) || internalGroup.equals(internalGroup2))
 			{
-				internalNffg=endpointWrap;
+				internalNffg=ew;
 				break;
 			}
-		
-		EndpointWrapper internalOtherNffg = null;
-		List<EndpointWrapper> otherEndpointsWrap = otherNffg.getEndpoints();
-		for(EndpointWrapper otherEndpointWrap: otherEndpointsWrap)
-			if(otherEndpointWrap.getEndpoint().getClass() == InternalEndPoint.class )
-				if(((InternalEndPoint)otherEndpointWrap.getEndpoint()).getInternalGroup().equals(((InternalEndPoint)internalNffg.getEndpoint()).getInternalGroup()))
-				{
-					internalOtherNffg=otherEndpointWrap;
-					break;
-				}
+		}
+		for(EndpointWrapper ew: getEndpointByName(otherNffg, "merge_point"))
+		{
+			String internalGroup=((InternalEndPoint)ew.getEndpoint()).getInternalGroup();
+			if(internalGroup.equals(internalGroup1) || internalGroup.equals(internalGroup2))
+			{
+				internalOtherNffg=ew;
+				break;
+			}
+		}
 		destroyEndpoint(nffg,internalNffg.getId());
 		destroyEndpoint(otherNffg,internalOtherNffg.getId());
 	}

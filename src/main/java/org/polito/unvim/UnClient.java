@@ -110,8 +110,8 @@ public class UnClient extends VimDriver {
 			for(Nffg nffg: bootNffgs.values())
 				UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
-		Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-		List<Network> networks = NetworkManager.getNetworks(nffg,UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint());
+		Nffg tenantNffg = bootNffgs.get(vimInstance.getTenant());
+		List<Network> networks = NetworkManager.getNetworks(tenantNffg,UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint());
 		return networks;
 	}
 
@@ -178,17 +178,18 @@ public class UnClient extends VimDriver {
 	
 			Server server;
 			String serverId;
-			Nffg tenantNffg, operatorNffg;
+			Nffg tenantNffg, operatorNffg, managementNffg;
 			synchronized(un_lock)
 			{
-				Map<String,Nffg> graphs = UniversalNodeProxy.getNFFGs(vimInstance, OPERATOR_GRAPH, vimInstance.getTenant());
+				Map<String,Nffg> graphs = UniversalNodeProxy.getNFFGs(vimInstance, MANAGEMENT_GRAPH, OPERATOR_GRAPH, vimInstance.getTenant());
 				tenantNffg = graphs.get(vimInstance.getTenant());
 				operatorNffg = graphs.get(OPERATOR_GRAPH);
+				managementNffg = graphs.get(MANAGEMENT_GRAPH);
 				if(tenantNffg==null || operatorNffg==null)
 					throw new VimDriverException("Illegal state. A tenant nffg + operator nffg must be already deployed");
 				// Create the server
-				serverId = ComputeManager.createServer(tenantNffg, hostname, templateId, keyPair, networks, securityGroups, userData);
-				UniversalNodeProxy.sendNFFG(vimInstance, tenantNffg);
+				serverId = ComputeManager.createServer(managementNffg, tenantNffg, hostname, templateId, keyPair, networks, securityGroups, userData);
+				UniversalNodeProxy.sendNFFGs(vimInstance, managementNffg, tenantNffg);
 			}
 			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
 			try
@@ -253,13 +254,15 @@ public class UnClient extends VimDriver {
 		synchronized(un_lock)
 		{
 			log.debug("Delete required for server with id: " + id);
-			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-			Nffg managementNffg = UniversalNodeProxy.getNFFG(vimInstance, MANAGEMENT_GRAPH);
-			if(nffg==null || managementNffg==null)
+			Map<String,Nffg> graphs = UniversalNodeProxy.getNFFGs(vimInstance, OPERATOR_GRAPH, MANAGEMENT_GRAPH, vimInstance.getTenant());
+			Nffg tenantNffg = graphs.get(vimInstance.getTenant());
+			Nffg operatorNffg = graphs.get(OPERATOR_GRAPH);
+			Nffg managementNffg = graphs.get(MANAGEMENT_GRAPH);
+			if(tenantNffg==null || managementNffg==null)
 				throw new VimDriverException("Illegal state. A tenant nffg + management nffg must be already deployed");
 			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
-			ComputeManager.destroyServer(managementNffg, nffg, id, unConfig.getConfigurationServiceEndpoint(),true);
-			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+			ComputeManager.destroyServer(managementNffg, operatorNffg, tenantNffg, id, unConfig.getConfigurationServiceEndpoint(),true);
+			UniversalNodeProxy.sendNFFGs(vimInstance, managementNffg, tenantNffg);
 		}
 	}
 
@@ -268,16 +271,18 @@ public class UnClient extends VimDriver {
 		synchronized(un_lock)
 		{
 			log.debug("Delete required for server with id: " + id);
-			Nffg nffg = UniversalNodeProxy.getNFFG(vimInstance, vimInstance.getTenant());
-			Nffg operatorNffg = UniversalNodeProxy.getNFFG(vimInstance, OPERATOR_GRAPH);
-			if(nffg==null || operatorNffg==null)
+			Map<String,Nffg> graphs = UniversalNodeProxy.getNFFGs(vimInstance, OPERATOR_GRAPH, MANAGEMENT_GRAPH, vimInstance.getTenant());
+			Nffg tenantNffg = graphs.get(vimInstance.getTenant());
+			Nffg operatorNffg = graphs.get(OPERATOR_GRAPH);
+			Nffg managementNffg = graphs.get(MANAGEMENT_GRAPH);
+			if(tenantNffg==null || operatorNffg==null)
 				throw new VimDriverException("Illegal state. A tenant nffg + operator nffg must be already deployed");
 			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
 			synchronized(config_lock)
 			{
-				ComputeManager.destroyServer(operatorNffg, nffg, id, unConfig.getConfigurationServiceEndpoint(),false);
+				ComputeManager.destroyServer(managementNffg,operatorNffg, tenantNffg, id, unConfig.getConfigurationServiceEndpoint(),false);
 			}
-			UniversalNodeProxy.sendNFFG(vimInstance, nffg);
+			UniversalNodeProxy.sendNFFGs(vimInstance, managementNffg, tenantNffg);
 		}
 	}
 
