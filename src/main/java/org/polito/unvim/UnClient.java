@@ -163,7 +163,7 @@ public class UnClient extends VimDriver {
 		try
 			{
 			log.debug("New server required:");
-			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", userData: " + (userData==null? "null":userData) + ", floatingIps: " + (floatingIps==null? "null":floatingIps) + ", keys: " + (keys==null? "null":keys) );
+			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", floatingIps: " + (floatingIps==null? "null":floatingIps));
 			// Given an image name search the template:
 			String templateId=null;
 			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);

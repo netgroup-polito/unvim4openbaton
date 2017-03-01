@@ -33,6 +33,9 @@ public class ComputeManager {
 		}
 		for(String networkId: networks)
 			NffgManager.connectVnfToVnf(tenantNffg, vnfId, networkId, true);
+		
+		log.debug("Server interfaces: "+NffgManager.getVnfById(tenantNffg, vnfId).getPorts());
+		
 		return vnfId;
 	}
 

@@ -45,4 +45,11 @@ public class Port {
 		this.trusted = trusted;
 	}
 
+	@Override
+	public String toString()
+	{
+		return "id: " + id
+				+ "name" + name
+				+ "mac" + macAddress;
+	}
 }

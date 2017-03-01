@@ -168,7 +168,6 @@ public class UniversalNodeProxy {
 
 		ObjectMapper mapper = new ObjectMapper();
 		String jsonInString = mapper.writeValueAsString(auth);
-		System.out.println(jsonInString);
 
 		OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
 		out.write(jsonInString);

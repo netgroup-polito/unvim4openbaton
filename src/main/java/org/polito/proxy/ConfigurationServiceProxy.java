@@ -21,6 +21,7 @@ public class ConfigurationServiceProxy {
 
 	public static void sendDhcpYang(String datastoreEndpoint, DhcpYang yang, String tenant, String graphId, String vnfId) throws VimDriverException
 	{
+		log.debug("Sending the Dhcp Configuration... (vnfId: "+vnfId+")");
 		try
 		{
 	        URL url = new URL(datastoreEndpoint + "/config/vnf/" + vnfId + "/" + graphId + "/" + tenant);
@@ -52,6 +53,7 @@ public class ConfigurationServiceProxy {
 
 	public static void sendNatYang(String datastoreEndpoint, NatYang yang, String tenant, String graphId, String vnfId) throws VimDriverException
 	{
+		log.debug("Sending the Nat Configuration... (vnfId: "+vnfId+")");
 		try
 		{
 	        URL url = new URL(datastoreEndpoint + "/config/vnf/" + vnfId + "/" + graphId + "/" + tenant);
@@ -84,6 +86,7 @@ public class ConfigurationServiceProxy {
 	public static DhcpYang getDhcpYang(String datastoreEndpoint, String tenant, String graphId, String vnfId) throws VimDriverException
 	{
 		DhcpYang dhcpYang;
+		log.debug("Request for a Dhcp Configuration... (vnfId: "+vnfId+")");
 		try
 		{
 	        URL url = new URL(datastoreEndpoint + "/config/status/" + vnfId + "/" + graphId + "/" + tenant);
@@ -117,6 +120,7 @@ public class ConfigurationServiceProxy {
 	}
 
 	public static NatYang getNatYang(String configurationService, String tenant, String graphId, String vnfId) throws VimDriverException {
+		log.debug("Request for a Nat Configuration... (vnfId: "+vnfId+")");
 		NatYang natYang;
 		try
 		{
