@@ -41,10 +41,9 @@ public class NetworkManager {
 	private static final String MANAGEMENT_SWITCH_TEMPLATE = "managementSwitch";
 	private static final String MANAGEMENT_DHCP_TEMPLATE = "managementDhcp";
 	private static final String MANAGEMENT_ROUTER_TEMPLATE = "managementRouter";
-	private static final String OPERATOR_SWITCH = "operator_SWITCH";
 	private static final String OPERATOR_ROUTER = "operator_ROUTER";
-	private static final String OPERATOR_SWITCH_TEMPLATE = MANAGEMENT_SWITCH_TEMPLATE;
 	private static final String OPERATOR_ROUTER_TEMPLATE = "operatorRouter";
+	private static final String EXTERNAL_NET_ENDPOINT = "wanEp";
 	private static Logger log = LoggerFactory.getLogger(UnClient.class);
 
 
@@ -110,37 +109,35 @@ public class NetworkManager {
 		return subnet;
 	}
 
-	public static Map<String,Nffg> createBootGraphs(Nffg operatorNffg)
+	public static Map<String,Nffg> createBootGraphs()
 	{
 		// Creating management Graph
 		Nffg managementNffg = NffgManager.createEmptyNffg("management_graph");
 		String managementSwId = NffgManager.getNewId(managementNffg.getVnfs());
 		String managementDhcpId = NffgManager.getNewId(managementNffg.getVnfs());
 		String managementRouterId = NffgManager.getNewId(managementNffg.getVnfs());
+		String manWanMergePointId = NffgManager.getNewId(managementNffg.getEndpoints());
 		NffgManager.createVnf(managementNffg, managementSwId, MANAGEMENT_SWITCH, MANAGEMENT_SWITCH, null, MANAGEMENT_SWITCH_TEMPLATE);
 		NffgManager.createVnf(managementNffg, managementDhcpId, MANAGEMENT_DHCP, MANAGEMENT_DHCP, null, MANAGEMENT_DHCP_TEMPLATE);
 		NffgManager.createVnf(managementNffg, managementRouterId, MANAGEMENT_ROUTER, MANAGEMENT_ROUTER, null, MANAGEMENT_ROUTER_TEMPLATE);
+		NffgManager.createEndpoint(managementNffg, manWanMergePointId, EXTERNAL_NET_ENDPOINT, Type.INTERNAL, EXTERNAL_NET_ENDPOINT);
 		NffgManager.connectVnfToVnf(managementNffg,managementSwId,managementDhcpId,false);
 		NffgManager.connectVnfToVnf(managementNffg,managementRouterId,managementSwId,true);
+		NffgManager.connectEndpointToVnf(managementNffg,manWanMergePointId,managementRouterId);
 
-		// Updating operator Graph
-		NffgManager.eraseRules(operatorNffg);
-		String operatorSwId = NffgManager.getNewId(operatorNffg.getVnfs());
+		// Creating operator Graph
+		Nffg operatorNffg = NffgManager.createEmptyNffg("operator_graph");
+		String opWanMergePointId = NffgManager.getNewId(operatorNffg.getEndpoints());
 		String operatorRouterId = NffgManager.getNewId(operatorNffg.getVnfs());
-		String operatorHoststackId = NffgManager.getEndpointByName(operatorNffg, "operatorHoststack").get(0).getId();
-		String wanInterfaceId = NffgManager.getEndpointByName(operatorNffg, "wanInterface").get(0).getId();
-		NffgManager.createVnf(operatorNffg, operatorSwId, OPERATOR_SWITCH, OPERATOR_SWITCH, null, OPERATOR_SWITCH_TEMPLATE);
+		NffgManager.createEndpoint(operatorNffg, opWanMergePointId, EXTERNAL_NET_ENDPOINT, Type.INTERNAL, EXTERNAL_NET_ENDPOINT);
 		NffgManager.createVnf(operatorNffg, operatorRouterId, OPERATOR_ROUTER, OPERATOR_ROUTER, null, OPERATOR_ROUTER_TEMPLATE);
-		NffgManager.connectEndpointToVnf(operatorNffg,operatorHoststackId,operatorSwId);
-		NffgManager.connectEndpointToVnf(operatorNffg,wanInterfaceId,operatorSwId);
 
 		// Connecting the two graphs
 		Map<String,Nffg> graphs = new HashMap<String, Nffg>();
 		NffgManager.connectGraphToGraph(operatorNffg, operatorRouterId, managementNffg, managementSwId, true);
-		NffgManager.connectGraphToGraph(managementNffg, managementRouterId, operatorNffg, operatorSwId);
-		NffgManager.connectVnfToVnf(operatorNffg,operatorRouterId,operatorSwId,false);
-		graphs.put(operatorNffg.getId(), operatorNffg);
+		NffgManager.connectEndpointToVnf(operatorNffg,opWanMergePointId,operatorRouterId);
 		graphs.put(managementNffg.getId(), managementNffg);
+		graphs.put(operatorNffg.getId(), operatorNffg);
 		return graphs;
 	}
 	
@@ -194,7 +191,7 @@ public class NetworkManager {
 				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "config", null);
 			else if(NffgManager.areConnected(operatorNffg, router.getId(), port.getId(), tenantNffg, createdNetwork.getExtId()))
 				YangManager.addInterface(natYang, port.getName(), defaultGateway, "static", "lan", null);
-			else if(firstConfiguration && NffgManager.areConnected(operatorNffg, router.getId(), port.getId(), NffgManager.getVnfsByDescription(operatorNffg,OPERATOR_SWITCH).get(0).getId()))
+			else if(firstConfiguration && NffgManager.areConnected(operatorNffg, router.getId(), port.getId(), NffgManager.getEndpointByName(operatorNffg, EXTERNAL_NET_ENDPOINT).get(0).getId()))
 				YangManager.addInterface(natYang, port.getName(), null, "dhcp", "wan", null);
 
 		// Send the yang
@@ -311,8 +308,8 @@ public class NetworkManager {
 						String ipAddress = macIpAssociation.get(mac);
 						if(ipAddress==null)
 						{
-							if(secondsIpAddress>82)
-								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 90 seconds!");
+							if(secondsIpAddress>119)
+								throw new VimDriverException("the interface with mac address: '"+ mac + " has not be able to get an Ip Address in 120 seconds!");
 							secondsIpAddress+=3;
 							log.debug("The Dhcp with id " + vnfSubnet.getId() + " has not assigned an Ip address to the interface with mac address: '"+ mac + "' yet. Sleeping 3 seconds... ["+secondsIpAddress+"]");
 							try {

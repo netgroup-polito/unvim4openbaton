@@ -106,7 +106,7 @@ public class UnClient extends VimDriver {
 		if(bootNffgs.get(MANAGEMENT_GRAPH)==null)
 		{
 			log.debug("The management graph doesn't exist yet. Creating one");
-			bootNffgs = NetworkManager.createBootGraphs(bootNffgs.get(OPERATOR_GRAPH));
+			bootNffgs = NetworkManager.createBootGraphs();
 			for(Nffg nffg: bootNffgs.values())
 				UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
@@ -294,7 +294,7 @@ public class UnClient extends VimDriver {
 		if(bootNffgs.get(MANAGEMENT_GRAPH)==null)
 		{
 			log.debug("The management graph doesn't exist yet. Creating one");
-			bootNffgs = NetworkManager.createBootGraphs(bootNffgs.get(OPERATOR_GRAPH));
+			bootNffgs = NetworkManager.createBootGraphs();
 			for(Nffg nffg: bootNffgs.values())
 				UniversalNodeProxy.sendNFFG(vimInstance, nffg);
 		}
