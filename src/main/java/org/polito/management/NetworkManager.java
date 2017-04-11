@@ -458,4 +458,13 @@ public class NetworkManager {
 		String managementNetId = NffgManager.getVnfsByDescription(managementNffg,MANAGEMENT_SWITCH).get(0).getId();
 		NffgManager.disconnectGraphs(managementNffg, managementNetId, tenantNffg, id);
 	}
+
+	public static String getNetworkIdByName(Nffg nffg, String name) {
+		String full_network_name = NETWORK_PREFIX + name;
+		for(Vnf vnf: nffg.getVnfs()) {
+			if (vnf.getName().equals(full_network_name))
+				return vnf.getId();
+		}
+		return null;
+	}
 }
