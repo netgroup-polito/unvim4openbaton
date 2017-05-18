@@ -1,4 +1,4 @@
-## Installation
+# Installation
 This project needs the set up and installation of several modules:
 * [Open Baton orchestrator and VNFM (developer version)](http://openbaton.github.io/documentation/nfvo-installation-src/)
 * [Universal Node orchestrator (openbaton_integration branch)](https://github.com/netgroup-polito/un-orchestrator/tree/openbaton_integration)
