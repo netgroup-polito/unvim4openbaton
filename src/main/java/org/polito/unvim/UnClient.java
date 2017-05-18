@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;import org.openbaton.catalogue.mano.common.DeploymentFlavour;
+import java.util.concurrent.locks.ReentrantLock;
+import org.openbaton.catalogue.mano.descriptor.VNFDConnectionPoint;
+import org.openbaton.catalogue.mano.common.DeploymentFlavour;
 import org.openbaton.catalogue.nfvo.NFVImage;
 import org.openbaton.catalogue.nfvo.Network;
 import org.openbaton.catalogue.nfvo.Quota;
@@ -53,9 +55,7 @@ public class UnClient extends VimDriver {
 		          args[0],
 		          args[1],
 		          Integer.parseInt(args[2]),
-		          5,
-		          args[4],
-		          args[5]);
+		          5);
 		    } else if (args.length == 4) {
 		      PluginStarter.registerPlugin(
 		    		  UnClient.class,
@@ -64,12 +64,12 @@ public class UnClient extends VimDriver {
 		          Integer.parseInt(args[2]),
 		          5);
 		    } else
-		      PluginStarter.registerPlugin(UnClient.class, "unvim", "localhost", 5672, 5);
+		      PluginStarter.registerPlugin(UnClient.class, "unvim", "130.192.225.193", 5672, 5);
 		}
 
 	@Override
 	public Server launchInstance(VimInstance vimInstance, String name, String image, String flavor, String keypair,
-			Set<String> network, Set<String> secGroup, String userData) throws VimDriverException {
+			Set<VNFDConnectionPoint> network, Set<String> secGroup, String userData) throws VimDriverException {
 		return launchInstanceAndWait(vimInstance, name, image, null, keypair, network, secGroup, userData, null, null);
 	}
 
@@ -112,6 +112,7 @@ public class UnClient extends VimDriver {
 		}
 		Nffg tenantNffg = bootNffgs.get(vimInstance.getTenant());
 		List<Network> networks = NetworkManager.getNetworks(tenantNffg,UniversalNodeProxy.getConfiguration(vimInstance).getConfigurationServiceEndpoint());
+		for(Network nw: networks) log.debug("network found: " + nw.getName() + " ID => " + nw.getId() + " EXT_ID =>" + nw.getExtId());
 		return networks;
 	}
 
@@ -158,12 +159,16 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
-			String keyPair, Set<String> networks, Set<String> securityGroups, String userData, Map<String, String> floatingIps,
+			String keyPair, Set<VNFDConnectionPoint> networksDict, Set<String> securityGroups, String userData, Map<String, String> floatingIps,
 			Set<Key> keys) throws VimDriverException {
 		try
 			{
+            String oldVNFDCP = gson.toJson(networksDict);
+            Set<VNFDConnectionPoint> networks =
+                    gson.fromJson(oldVNFDCP, new TypeToken<Set<VNFDConnectionPoint>>() {}.getType());
+
 			log.debug("New server required:");
-			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", floatingIps: " + (floatingIps==null? "null":floatingIps));
+			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks.toString()) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", floatingIps: " + (floatingIps==null? "null":floatingIps));
 			// Given an image name search the template:
 			String templateId=null;
 			List<VnfTemplate> templates = UniversalNodeProxy.getTemplates(vimInstance);
@@ -188,7 +193,9 @@ public class UnClient extends VimDriver {
 				if(tenantNffg==null || operatorNffg==null)
 					throw new VimDriverException("Illegal state. A tenant nffg + operator nffg must be already deployed");
 				// Create the server
+                log.debug("Sending a VNF request to the UN");
 				serverId = ComputeManager.createServer(managementNffg, tenantNffg, hostname, templateId, keyPair, networks, securityGroups, userData);
+				log.debug("VNF created into the UN domain");
 				UniversalNodeProxy.sendNFFGs(vimInstance, managementNffg, tenantNffg);
 			}
 			UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
@@ -214,6 +221,7 @@ public class UnClient extends VimDriver {
 				deleteServerByIdAndWait(vimInstance, serverId);
 				throw new VimDriverException(e.getMessage());
 			}
+			log.debug("END create server");
 			return server;
 		}
 		catch(Exception e)
@@ -246,7 +254,7 @@ public class UnClient extends VimDriver {
 
 	@Override
 	public Server launchInstanceAndWait(VimInstance vimInstance, String hostname, String image, String extId,
-			String keyPair, Set<String> networks, Set<String> securityGroups, String userData) throws VimDriverException {
+			String keyPair, Set<VNFDConnectionPoint> networks, Set<String> securityGroups, String userData) throws VimDriverException {
 		return launchInstanceAndWait(vimInstance, hostname, image, extId, keyPair, networks, securityGroups, userData, null, null);
 	}
 
@@ -303,7 +311,10 @@ public class UnClient extends VimDriver {
 		if(tenantNffg==null)
 			tenantNffg = NffgManager.createEmptyNffg(vimInstance.getTenant());
 		NetworkManager.createNetwork(operatorNffg, tenantNffg, network);
+        log.debug("Network creation request to the UN");
 		UniversalNodeProxy.sendNFFGs(vimInstance, operatorNffg, tenantNffg);
+        log.debug("Network created in the UN domain");
+		log.debug("END create network");
 		return network;
 	}
 
@@ -368,7 +379,9 @@ public class UnClient extends VimDriver {
 		Nffg operatorNffg = graphs.get(OPERATOR_GRAPH);
 		UnConfiguration unConfig = UniversalNodeProxy.getConfiguration(vimInstance);
 		NetworkManager.createSubnet(managementNffg, tenantNffg, createdNetwork, subnet, unConfig.getDatastoreEndpoint());
+        log.debug("Subnet creation request to the UN");
 		UniversalNodeProxy.sendNFFGs(vimInstance, managementNffg, tenantNffg);
+        log.debug("Subnet created into the UN domain");
 		synchronized (config_lock) {
 			NetworkManager.configureSubnet(managementNffg, operatorNffg, tenantNffg,createdNetwork,subnet,properties,unConfig.getConfigurationServiceEndpoint());
 		}

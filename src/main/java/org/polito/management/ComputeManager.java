@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.openbaton.catalogue.nfvo.Server;
+import org.openbaton.catalogue.mano.descriptor.VNFDConnectionPoint;
 import org.openbaton.exceptions.VimDriverException;
 import org.polito.model.message.FloatingIpPool;
 import org.polito.model.nffg.Nffg;
@@ -19,8 +20,19 @@ public class ComputeManager {
 	private static String SERVER_INSTANCE = "Server";
 	private static Logger log = LoggerFactory.getLogger(ComputeManager.class);
 
+	/***
+	 * @param managementNffg
+	 * @param tenantNffg
+	 * @param hostname
+	 * @param templateImageId
+	 * @param keyPair
+	 * @param networks
+	 * @param securityGroups
+	 * @param userData
+	 * @return
+	 */
 	public static String createServer(Nffg managementNffg, Nffg tenantNffg, String hostname, String templateImageId, String keyPair,
-			Set<String> networks, Set<String> securityGroups, String userData){
+			Set<VNFDConnectionPoint> networks, Set<String> securityGroups, String userData){
 		String vnfId = NffgManager.getNewId(tenantNffg.getVnfs());
 		NffgManager.createVnf(tenantNffg,vnfId,hostname,SERVER_INSTANCE,null,templateImageId);
 		// This is the first connection of the vnf, so the used port will have the name 'eth0'
@@ -31,9 +43,14 @@ public class ComputeManager {
 			userData=userData.replace("export MANAGEMENT_PORT=", "export MANAGEMENT_PORT=eth0");
 			NffgManager.setUserDataToVnf(tenantNffg,vnfId,userData);
 		}
-		for(String networkId: networks)
+		for(VNFDConnectionPoint vnfdConnectionPoint: networks)
+			log.debug("VNFD_CONNECTION_POINT LIST: " + vnfdConnectionPoint.toString());//ELIMINARE
+		for(VNFDConnectionPoint vnfdConnectionPoint: networks) {
+			/*The UN implements a network with a Switch (VNF), in order to connect a generic VNF A to a network
+			I have to connect the VNF A with the Switch VNF of the network*/
+			String networkId = NetworkManager.getNetworkIdByName(tenantNffg, vnfdConnectionPoint.getVirtual_link_reference());
 			NffgManager.connectVnfToVnf(tenantNffg, vnfId, networkId, true);
-		
+		}
 		log.debug("Server interfaces: "+NffgManager.getVnfById(tenantNffg, vnfId).getPorts());
 		
 		return vnfId;
