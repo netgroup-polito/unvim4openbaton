@@ -1,0 +1,61 @@
+{
+  "forwarding-graph": {
+    "id": "operator_graph",
+    "end-points": [
+      {
+        "id": "hs",
+        "name": "operatorHoststack",
+        "type": "host-stack",
+        "host-stack": {
+          "configuration": "static",
+          "ipv4": "130.192.225.178/25"
+        }
+      },
+      {
+        "type": "internal",
+        "id": "extNetworkMergepoint",
+        "name": "wanEp",
+        "internal": {
+          "internal-group": "wanEp"
+        }
+      }
+    ],
+    "big-switch": {
+      "flow-rules": [
+        {
+          "id": "1",
+          "priority": 1,
+          "match": {
+            "port_in": "endpoint:extNetworkMergepoint"
+          },
+          "actions": [
+            {
+              "output_to_port": "endpoint:hs"
+            }
+          ]
+        },
+        {
+          "priority": 1,
+          "match": {
+            "port_in": "endpoint:hs"
+          },
+          "id": "2",
+          "actions": [
+            {
+              "output_to_port": "endpoint:extNetworkMergepoint"
+            }
+          ]
+        }
+      ]
+    },
+    "node-config": [
+      {
+        "id": "1",
+        "type": "default-gateway",
+        "default-gateway": {
+          "ip-address": "130.192.225.254"
+        }
+      }
+    ]
+  }
+}

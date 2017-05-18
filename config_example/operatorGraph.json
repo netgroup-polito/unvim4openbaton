@@ -1,0 +1,97 @@
+{
+  "forwarding-graph": {
+    "id": "operator_graph",
+    "end-points": [
+      {
+        "id": "3nrc5id2",
+        "name": "wanEp",
+        "type": "internal",
+        "internal": {
+          "internal-group": "wanEp"
+        }
+      },
+      {
+        "id": "40lmi96b",
+        "name": "merge_point",
+        "type": "internal",
+        "internal": {
+          "internal-group": "operator_graph_management_graph_ko1tv3nk_63vdbq5p"
+        }
+      }
+    ],
+    "VNFs": [
+      {
+        "id": "ko1tv3nk",
+        "name": "operator_ROUTER",
+        "ports": [
+          {
+            "id": "L2port:0",
+            "name": "eth0",
+            "trusted": true,
+            "mac": "e8:ad:f6:c6:7e:1b"
+          },
+          {
+            "id": "L2port:1",
+            "name": "eth1",
+            "trusted": false
+          }
+        ],
+        "description": "operator_ROUTER",
+        "vnf_template": "operatorRouter"
+      }
+    ],
+    "node-config": [],
+    "big-switch": {
+      "flow-rules": [
+        {
+          "id": "tchpn8bb",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:ko1tv3nk:L2port:0"
+          },
+          "actions": [
+            {
+              "output_to_port": "endpoint:40lmi96b"
+            }
+          ]
+        },
+        {
+          "id": "rp1luo26",
+          "priority": 0,
+          "match": {
+            "port_in": "endpoint:40lmi96b"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:ko1tv3nk:L2port:0"
+            }
+          ]
+        },
+        {
+          "id": "82e9s8ve",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:ko1tv3nk:L2port:1"
+          },
+          "actions": [
+            {
+              "output_to_port": "endpoint:3nrc5id2"
+            }
+          ]
+        },
+        {
+          "id": "2n1vv272",
+          "priority": 0,
+          "match": {
+            "port_in": "endpoint:3nrc5id2"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:ko1tv3nk:L2port:1"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

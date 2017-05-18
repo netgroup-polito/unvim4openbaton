@@ -1,0 +1,51 @@
+{
+  "forwarding-graph": {
+    "id": "operator_graph",
+    "end-points": [
+      {
+        "id": "wan",
+        "name": "if",
+        "type": "interface",
+        "interface": {
+          "if-name": "eth0"
+        }
+      },
+      {
+        "type": "internal",
+        "id": "extNetworkMergepoint",
+        "name": "wanEp",
+        "internal": {
+          "internal-group": "wanEp"
+        }
+      }
+    ],
+    "big-switch": {
+      "flow-rules": [
+        {
+          "id": "1",
+          "priority": 1,
+          "match": {
+            "port_in": "endpoint:extNetworkMergepoint"
+          },
+          "actions": [
+            {
+              "output_to_port": "endpoint:wan"
+            }
+          ]
+        },
+        {
+          "priority": 1,
+          "match": {
+            "port_in": "endpoint:wan"
+          },
+          "id": "2",
+          "actions": [
+            {
+              "output_to_port": "endpoint:extNetworkMergepoint"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "forwarding-graph": {
+    "id": "management_graph",
+    "end-points": [
+      {
+        "id": "k15on2pt",
+        "name": "wanEp",
+        "type": "internal",
+        "internal": {
+          "internal-group": "wanEp"
+        }
+      },
+      {
+        "id": "at0trvnf",
+        "name": "merge_point",
+        "type": "internal",
+        "internal": {
+          "internal-group": "operator_graph_management_graph_ko1tv3nk_63vdbq5p"
+        }
+      }
+    ],
+    "VNFs": [
+      {
+        "id": "63vdbq5p",
+        "name": "manag_SWITCH",
+        "ports": [
+          {
+            "id": "L2port:0",
+            "name": "eth0",
+            "trusted": false
+          },
+          {
+            "id": "L2port:1",
+            "name": "eth1",
+            "trusted": false
+          },
+          {
+            "id": "L2port:2",
+            "name": "eth2",
+            "trusted": false
+          }
+        ],
+        "description": "manag_SWITCH",
+        "vnf_template": "managementSwitch"
+      },
+      {
+        "id": "3a8jcocr",
+        "name": "manag_DHCP",
+        "ports": [
+          {
+            "id": "L2port:0",
+            "name": "eth0",
+            "trusted": false
+          }
+        ],
+        "description": "manag_DHCP",
+        "vnf_template": "managementDhcp"
+      },
+      {
+        "id": "am92456a",
+        "name": "manag_ROUTER",
+        "ports": [
+          {
+            "id": "L2port:0",
+            "name": "eth0",
+            "trusted": true,
+            "mac": "14:d4:ed:e7:0f:62"
+          },
+          {
+            "id": "L2port:1",
+            "name": "eth1",
+            "trusted": false
+          }
+        ],
+        "description": "manag_ROUTER",
+        "vnf_template": "managementRouter"
+      }
+    ],
+    "node-config": [],
+    "big-switch": {
+      "flow-rules": [
+        {
+          "id": "clrrjee9",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:63vdbq5p:L2port:0"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:3a8jcocr:L2port:0"
+            }
+          ]
+        },
+        {
+          "id": "fgjqlc3n",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:3a8jcocr:L2port:0"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:63vdbq5p:L2port:0"
+            }
+          ]
+        },
+        {
+          "id": "oad09dm",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:am92456a:L2port:0"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:63vdbq5p:L2port:1"
+            }
+          ]
+        },
+        {
+          "id": "5d2fk9bv",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:63vdbq5p:L2port:1"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:am92456a:L2port:0"
+            }
+          ]
+        },
+        {
+          "id": "e8boru97",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:am92456a:L2port:1"
+          },
+          "actions": [
+            {
+              "output_to_port": "endpoint:k15on2pt"
+            }
+          ]
+        },
+        {
+          "id": "qnr3gbs8",
+          "priority": 0,
+          "match": {
+            "port_in": "endpoint:k15on2pt"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:am92456a:L2port:1"
+            }
+          ]
+        },
+        {
+          "id": "5948r2oe",
+          "priority": 0,
+          "match": {
+            "port_in": "vnf:63vdbq5p:L2port:2"
+          },
+          "actions": [
+            {
+              "output_to_port": "endpoint:at0trvnf"
+            }
+          ]
+        },
+        {
+          "id": "4edu97eo",
+          "priority": 0,
+          "match": {
+            "port_in": "endpoint:at0trvnf"
+          },
+          "actions": [
+            {
+              "output_to_port": "vnf:63vdbq5p:L2port:2"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
