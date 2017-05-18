@@ -163,9 +163,9 @@ public class UnClient extends VimDriver {
 			Set<Key> keys) throws VimDriverException {
 		try
 			{
-            String oldVNFDCP = gson.toJson(networksDict);
+            String jsonNetworkDict = gson.toJson(networksDict);
             Set<VNFDConnectionPoint> networks =
-                    gson.fromJson(oldVNFDCP, new TypeToken<Set<VNFDConnectionPoint>>() {}.getType());
+                    gson.fromJson(jsonNetworkDict, new TypeToken<Set<VNFDConnectionPoint>>() {}.getType());
 
 			log.debug("New server required:");
 			log.debug("hostname: " + (hostname==null? "null":hostname) + ", image: " + (image==null? "null":image) + ", extId: " + (extId==null? "null":extId) +  ", keyPair: " + (keyPair==null? "null":keyPair) + ", networks: " + (networks==null? "null":networks.toString()) + ", securityGroups: " + (securityGroups==null? "null":securityGroups) + ", floatingIps: " + (floatingIps==null? "null":floatingIps));
