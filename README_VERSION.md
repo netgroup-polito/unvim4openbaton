@@ -1,4 +1,4 @@
-## Plugin Version
+# Plugin Version
 This plugin supports the Open Baton version 3.2.1.
 
 Difference from the previous plugin version (master branch):
