@@ -1,6 +1,6 @@
-## DEBUG information
+# DEBUG information
 
-# Screen commands
+## Screen commands
 By default, both Open Baton orchestrator and the generic VNFM are executed in a screen console.
 Following some useful commands:
 - Show all the screen instances active
@@ -26,7 +26,7 @@ Following some useful commands:
     ```
     where '$number' is the numebr of line you can scroll back
     
-# Log file
+## Log file
 You can find:
 * Plugin log in
     ```sh
