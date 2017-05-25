@@ -38,9 +38,9 @@ This project satisfies such requests instantiating a couple of VNFs (a switch an
 ### Create Network
 The VIM plugin create a switch for the emulation of a LAN.
 
-![drawing](Pictures/service_skeleton.jpg)
+![drawing](Pictures/network.jpg)
 
 ### Create Subnet
 The VIM plugin create a DHCP which is configured with the IP pool chosen by the Open Baton orchestrator.
 
-![drawing](Pictures/service_skeleton.jpg)
+![drawing](Pictures/subnet.jpg)
