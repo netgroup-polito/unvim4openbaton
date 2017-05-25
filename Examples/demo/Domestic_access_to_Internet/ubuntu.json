@@ -1,0 +1,31 @@
+{
+  "CPUrequirements": {
+    "platformType": "x86",
+    "socket": [
+      {
+        "coreNumbers": 1
+      }
+    ]
+  },
+  "ephemeral-file-system-size": "0",
+  "name": "ubuntu",
+  "functional-capability": "ubuntu",
+  "memory-size": "2048",
+  "vnf-type": "virtual-machine-kvm",
+  "uri-image-type": "local-file",
+  "swap-disk-size": "0",
+  "expandable": false,
+  "ports": [
+    {
+      "ipv6-config": "none",
+      "min": "1",
+      "label": "L2Port",
+      "ipv4-config": "none",
+      "position": "0-10",
+      "technology": "vhost",
+      "name": "eth"
+    }
+  ],
+  "root-file-system-size": "40",
+  "uri-image": "/var/lib/libvirt/images/ubuntu.qcow2"
+}
