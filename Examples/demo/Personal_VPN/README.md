@@ -1,7 +1,7 @@
 # Personal VPN
 This demo aims to show the deployment time of a service, for this purpose the VNFs print some timestamps into their log file.
 
-![drawing](Pictures/personal_vpn.jpg)
+![drawing](https://github.com/netgroup-polito/unvim4openbaton/blob/version_3.2.1/Pictures/personal_vpn.jpg)
 
 ## Deployment information
 * All the VNF described into the NSD refer to the same [template](https://github.com/netgroup-polito/unvim4openbaton/tree/version_3.2.1/Examples/demo/Personal_VPN/ubuntu.json)
