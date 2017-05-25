@@ -46,7 +46,7 @@ $ cd [un-orchestator]/orchestrator
 $ ./node-orchestrator --d config/[config.ini]
 ```
 
-Note that the IP addresses of the configuration service and of the datastare that are written in the config.ini file must not be local addresses (e.g, localhost, 0.0.0.0). In fact the Universal Node gives such addresses to the VIM plugin, which is potentially installed in a different machine.
+Note that the IP addresses of the configuration service and of the datastore that are written in the config.ini file must not be local addresses (e.g, localhost, 0.0.0.0). In fact the Universal Node gives such addresses to the VIM plugin, which is potentially installed in a different machine.
 
 ## Run the UN VIM plugin
 See the main README
